@@ -8,7 +8,7 @@ import type { Product } from '../../../types/product'
 import { CurrencyDisplay } from '../../../components/CurrencyDisplay'
 import { TableEmptyState } from '../../../components/TableEmptyState'
 import { MobileTableRow } from '../../../components/MobileTableRow'
-import { getOutstandingBalance, getNextDue, getOverdueDays, getNetPosition } from '../../../utils/contract'
+import { getOutstandingBalance, getNextDue, getOverdueDays, getNetPosition, remainingDue } from '../../../utils/contract'
 import { ContractStatusTag } from './ContractStatusTag'
 import { JUMP_PREV_ICON, JUMP_NEXT_ICON, DEFAULT_PAGE_SIZE, PAGE_SIZE_OPTIONS, PAGE_SIZE_CHANGER, MOBILE_PAGINATION } from '../../../constants/paginationIcons'
 import { useIsMobile } from '../../../components/useIsMobile'
@@ -66,7 +66,7 @@ export function ContractTable({ contracts, products, showBranchColumns, search }
         const overdueDays = getOverdueDays(c)
         return (
           <span>
-            {next.dueDate} · <CurrencyDisplay amount={next.amount} />
+            {next.dueDate} · <CurrencyDisplay amount={remainingDue(next)} />
             {overdueDays > 0 && <span style={{ color: token.colorError }}> · {overdueDays}d overdue</span>}
           </span>
         )

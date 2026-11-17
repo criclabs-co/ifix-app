@@ -26,10 +26,15 @@ export function submitContractForApproval(contract: Contract, actorId: string, a
   }
 }
 
+// What's still owed on one schedule item — its amount less any partial
+// payment or overpayment credit already applied to it (0 once paid).
+export function remainingDue(item: ScheduleItem): number {
+  if (item.status === 'paid' || item.status === 'paid_late') return 0
+  return Math.max(0, item.amount - (item.paidAmount ?? 0) - (item.creditAmount ?? 0))
+}
+
 export function getOutstandingBalance(contract: Contract): number {
-  return contract.schedule
-    .filter(s => s.status !== 'paid' && s.status !== 'paid_late')
-    .reduce((sum, s) => sum + s.amount, 0)
+  return contract.schedule.reduce((sum, s) => sum + remainingDue(s), 0)
 }
 
 export function getCollectedAmount(contract: Contract): number {
@@ -170,6 +175,8 @@ export function recalculateSchedule(contract: Contract): void {
     if (item.period > 0) {
       item.status = 'future'
       item.paidDate = null
+      delete item.paidAmount
+      delete item.creditAmount
     }
   })
 
@@ -185,25 +192,47 @@ export function recalculateSchedule(contract: Contract): void {
   const penaltyTarget = calcAccruedPenalty(penaltyBasisItem, contract.template.penalty)
   const collectionFeeTarget = getActiveCollectionFeeTotal(contract)
 
+  // Applies money to installments in order, from `idx`, partially when it
+  // runs out mid-item. `dueOnly` stops at the first item that wasn't yet due
+  // on the payment date (other than the one the payment started on — the
+  // current Due item counts even when paid ahead of its date). Money landing
+  // on an item after the same payment already settled an earlier one is
+  // overflow, so it's tracked as credit rather than a direct partial payment.
   let idx = firstOpenIdx
-  let carry = 0
+  function applyToInstallments(amount: number, payment: ContractPaymentRecord, dueOnly: boolean, settledEarlier: boolean): { left: number; settled: boolean } {
+    let left = amount
+    let settled = settledEarlier
+    const startIdx = idx
+    while (left > 0 && idx !== -1 && idx < contract.schedule.length) {
+      const item = contract.schedule[idx]
+      if (dueOnly && idx !== startIdx && item.dueDate > payment.paymentDate) break
+      const owed = remainingDue(item)
+      const applied = Math.min(left, owed)
+      left -= applied
+      if (applied === owed) {
+        item.status = dayjs(payment.paymentDate).isAfter(dayjs(item.dueDate), 'day') ? 'paid_late' : 'paid'
+        item.paidDate = payment.paymentDate
+        delete item.paidAmount
+        delete item.creditAmount
+        settled = true
+        idx++
+      } else if (settled) {
+        item.creditAmount = (item.creditAmount ?? 0) + applied
+      } else {
+        item.paidAmount = (item.paidAmount ?? 0) + applied
+      }
+    }
+    return { left, settled }
+  }
+
   let penaltyPaidTotal = 0
   let collectionFeePaidTotal = 0
   for (const payment of orderedPayments) {
-    let remaining = payment.amount + carry
-    carry = 0
-    while (remaining > 0 && idx !== -1 && idx < contract.schedule.length) {
-      const item = contract.schedule[idx]
-      if (remaining < item.amount) break
-      item.status = dayjs(payment.paymentDate).isAfter(dayjs(item.dueDate), 'day') ? 'paid_late' : 'paid'
-      item.paidDate = payment.paymentDate
-      remaining -= item.amount
-      idx++
-    }
-    // Payment Waterfall, per the Penalty doc: installment first (above),
-    // then penalty, then collection fee — only once both of those are
-    // satisfied does anything left over carry forward to pre-pay a future
-    // installment (unchanged `carry` behavior from before this rework).
+    // Payment Waterfall, per the Penalty doc: installment first, then
+    // penalty, then collection fee — only once both of those are satisfied
+    // does anything left over go forward to pre-pay future installments.
+    const first = applyToInstallments(payment.amount, payment, true, false)
+    let remaining = first.left
     if (remaining > 0) {
       const penaltyPayoff = Math.min(remaining, Math.max(0, penaltyTarget - penaltyPaidTotal))
       penaltyPaidTotal += penaltyPayoff
@@ -214,7 +243,7 @@ export function recalculateSchedule(contract: Contract): void {
       collectionFeePaidTotal += feePayoff
       remaining -= feePayoff
     }
-    carry = remaining
+    if (remaining > 0) applyToInstallments(remaining, payment, false, first.settled)
   }
 
   const today = dayjs().format('YYYY-MM-DD')

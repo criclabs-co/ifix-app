@@ -107,6 +107,13 @@ export interface ScheduleItem {
   // "Paid (Late)") — set when the payment covering this item was recorded
   // after its due date, same as an on-time payment in every other respect.
   status: 'paid' | 'paid_late' | 'due' | 'overdue' | 'future'
+  // Derived by recalculateSchedule, only on a still-open item: money already
+  // applied to it short of the full amount. `paidAmount` came from payments
+  // recorded against this item itself (a partial payment); `creditAmount`
+  // is overflow from a payment that settled an earlier item (an overpayment).
+  // What's left to pay is amount − paidAmount − creditAmount (remainingDue).
+  paidAmount?: number
+  creditAmount?: number
 }
 
 export interface ContractPaymentRecord {

@@ -14,7 +14,7 @@ import { Select } from '../../../components/AppSelect'
 import { useAppWindowContainer } from '../../../contexts/AppWindowContext'
 import { ScheduleStatusTag } from '../components/ScheduleStatusTag'
 import { canRecordPayment } from '../../../constants/roles'
-import { getNextDue, recordPayment } from '../../../utils/contract'
+import { getNextDue, recordPayment, remainingDue } from '../../../utils/contract'
 import { useIsMobile } from '../../../components/useIsMobile'
 import { MobileTableRow } from '../../../components/MobileTableRow'
 import { MOBILE_TABLE_PROPS, mobileColumns, tablePanelPadding } from '../../../components/mobileTable'
@@ -36,8 +36,8 @@ interface PaymentFormValues {
 // Record Payment — per the doc, logs a payment against the contract's
 // current Due/Overdue item (there's only ever one at a time; see
 // getNextDue). Full (or more) marks it Paid/Paid (Late) with any excess
-// carrying over to the next item(s); a partial amount is just logged,
-// leaving the item's own status alone — recalculateSchedule (called by
+// crediting the next item(s); a partial amount stays on the item as paid
+// toward it, leaving its status alone — recalculateSchedule (called by
 // recordPayment) is what actually works out which of those happened, not
 // this component.
 export function ScheduleTab({ contract, actor, onChanged }: Props) {
@@ -54,7 +54,7 @@ export function ScheduleTab({ contract, actor, onChanged }: Props) {
   function openModal() {
     form.resetFields()
     form.setFieldsValue({
-      amount: dueItem?.amount,
+      amount: dueItem ? remainingDue(dueItem) : undefined,
       method: 'transfer',
       paymentDate: dayjs(),
     })
@@ -78,7 +78,7 @@ export function ScheduleTab({ contract, actor, onChanged }: Props) {
     { title: <span style={{ color: token.colorText }}>#</span>, dataIndex: 'period', key: 'period', width: 50 },
     { title: 'Item', dataIndex: 'label', key: 'label' },
     { title: 'Due Date', dataIndex: 'dueDate', key: 'dueDate' },
-    { title: 'Amount', dataIndex: 'amount', key: 'amount', align: 'right', render: (val: number) => <CurrencyDisplay amount={val} /> },
+    { title: 'Amount', dataIndex: 'amount', key: 'amount', align: 'right', render: (_, s) => <ScheduleAmount item={s} /> },
     { title: 'Paid Date', dataIndex: 'paidDate', key: 'paidDate', render: (val: string | null) => val ?? <span style={{ color: token.colorTextDisabled }}>—</span> },
     // Pinned right like every other Status column in the app, so it stays
     // visible once the row scrolls horizontally on a narrow window.
@@ -92,7 +92,7 @@ export function ScheduleTab({ contract, actor, onChanged }: Props) {
       primary={item.label}
       trailing={<ScheduleStatusTag status={item.status} />}
       secondary={item.paidDate ? `Due ${item.dueDate} · Paid ${item.paidDate}` : `Due ${item.dueDate}`}
-      trailingSecondary={<CurrencyDisplay amount={item.amount} />}
+      trailingSecondary={<ScheduleAmount item={item} />}
     />
   ))
 
@@ -159,7 +159,10 @@ export function ScheduleTab({ contract, actor, onChanged }: Props) {
       >
         {dueItem && (
           <Typography.Text type="secondary" style={{ display: 'block', marginBottom: 16 }}>
-            Recording against <strong>{dueItem.label}</strong>, due {dueItem.dueDate} (<CurrencyDisplay amount={dueItem.amount} />).
+            Recording against <strong>{dueItem.label}</strong>, due {dueItem.dueDate}:{' '}
+            {remainingDue(dueItem) < dueItem.amount
+              ? <><CurrencyDisplay amount={remainingDue(dueItem)} /> left of <CurrencyDisplay amount={dueItem.amount} />.</>
+              : <><CurrencyDisplay amount={dueItem.amount} />.</>}
           </Typography.Text>
         )}
         <Form form={form} layout="vertical" requiredMark={false}>
@@ -181,5 +184,23 @@ export function ScheduleTab({ contract, actor, onChanged }: Props) {
         </Form>
       </Drawer>
     </div>
+  )
+}
+
+// An open item that already has money on it shows what's left to pay, with
+// what was applied listed underneath: "paid" for a partial payment made
+// toward it, "credit" for overflow from an earlier item's overpayment.
+function ScheduleAmount({ item }: { item: ScheduleItem }) {
+  const { token } = theme.useToken()
+  const paid = item.paidAmount ?? 0
+  const credit = item.creditAmount ?? 0
+  if (paid === 0 && credit === 0) return <CurrencyDisplay amount={item.amount} />
+  const sub = { display: 'block', fontSize: token.fontSizeSM, color: token.colorSuccess } as const
+  return (
+    <span style={{ display: 'inline-block', textAlign: 'right' }}>
+      <span style={{ color: token.colorText }}><CurrencyDisplay amount={remainingDue(item)} /></span>
+      {paid > 0 && <span style={sub}>paid −<CurrencyDisplay amount={paid} /></span>}
+      {credit > 0 && <span style={sub}>credit −<CurrencyDisplay amount={credit} /></span>}
+    </span>
   )
 }

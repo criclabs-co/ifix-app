@@ -33,6 +33,15 @@ export function remainingDue(item: ScheduleItem): number {
   return Math.max(0, item.amount - (item.paidAmount ?? 0) - (item.creditAmount ?? 0))
 }
 
+// Rejected → Closed. The unit was already released back to available when
+// the contract was rejected (LifecycleActions' handleReject), so there's
+// nothing else to undo.
+export function closeContract(contract: Contract, actorId: string): void {
+  contract.status = 'closed'
+  contract.closedBy = actorId
+  contract.closedAt = new Date().toISOString()
+}
+
 export function getOutstandingBalance(contract: Contract): number {
   return contract.schedule.reduce((sum, s) => sum + remainingDue(s), 0)
 }

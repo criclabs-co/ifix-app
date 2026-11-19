@@ -1,11 +1,12 @@
 import { useEffect, useState } from 'react'
 import { App, Button, Drawer, Form, Input, Modal, Space, Typography } from 'antd'
 import { InputNumber } from '../../../components/AppInputNumber'
-import { Check, X, Printer, Upload, Wallet } from 'lucide-react'
+import { Check, CircleX, X, Printer, Upload, Wallet } from 'lucide-react'
 import { Select } from '../../../components/AppSelect'
 import type { AuthUser } from '../../../types/installment'
 import type { Contract, ContractPaymentRecord, SignedContractFile } from '../../../types/contract'
-import { canApproveContract } from '../../../constants/roles'
+import { canApproveContract, canCloseContract } from '../../../constants/roles'
+import { confirmCloseContract } from './confirmCloseContract'
 import { getOutstandingBalance, buildActivationSchedule } from '../../../utils/contract'
 import { MOCK_PRODUCT_UNITS } from '../../../constants/mockProductUnits'
 import { PhotoUpload } from '../../../components/PhotoUpload'
@@ -24,7 +25,8 @@ interface Props {
 // Approve, at the review step) per status, so the whole lifecycle is
 // walkable from the detail page without a separate workflow screen.
 export function LifecycleActions({ contract, actor, onChanged }: Props) {
-  const { modal, message } = App.useApp()
+  const app = App.useApp()
+  const { modal, message } = app
   const appWindow = useAppWindowContainer()
   const [rejectOpen, setRejectOpen] = useState(false)
   const [paymentOpen, setPaymentOpen] = useState(false)
@@ -33,6 +35,7 @@ export function LifecycleActions({ contract, actor, onChanged }: Props) {
   const [paymentForm] = Form.useForm()
   const [uploadForm] = Form.useForm()
   const uploadedFiles = Form.useWatch('files', uploadForm) as SignedContractFile[] | undefined
+  const confirmClose = () => confirmCloseContract(app, contract, actor, onChanged)
 
   function startReview() {
     contract.status = 'under_review'
@@ -150,7 +153,11 @@ export function LifecycleActions({ contract, actor, onChanged }: Props) {
   // own submit button), not as a bare status-flip button here with no
   // chance to fix anything first. No action renders here for either
   // status; ContractDetailPage's own "Edit" button (canEditContractFields,
-  // creator-only) is the sole entry point into that flow.
+  // creator-only) is the sole entry point into that flow. Rejected also
+  // gets Close, for a contract that won't be resubmitted at all.
+  if (contract.status === 'rejected' && canCloseContract(actor, contract)) {
+    return <Button icon={<CircleX size={16} strokeWidth={2.25} />} onClick={confirmClose}>Close Contract</Button>
+  }
   if (contract.status === 'draft' || contract.status === 'rejected') {
     return null
   }

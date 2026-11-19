@@ -1,10 +1,11 @@
 import { useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { Button, Space, Tabs } from 'antd'
-import { Pencil, FileText, Lock } from 'lucide-react'
+import { App, Button, Space, Tabs, Tooltip } from 'antd'
+import { Pencil, FileText, Lock, CircleX } from 'lucide-react'
 import { useCurrentUser } from '../../contexts/AuthContext'
 import { MOCK_CONTRACTS } from '../../constants/mockContracts'
-import { canEditContractFields, canManageContract, canViewContracts, homePath, scopedContractList } from '../../constants/roles'
+import { canCloseContract, canEditContractFields, canManageContract, canViewContracts, homePath, scopedContractList } from '../../constants/roles'
+import { confirmCloseContract } from './components/confirmCloseContract'
 import { recalculateSchedule } from '../../utils/contract'
 import { OverviewTab } from './detail/OverviewTab'
 import { CustomerTab } from './detail/CustomerTab'
@@ -24,6 +25,7 @@ export function ContractDetailPage() {
   const navigate = useNavigate()
   const [version, setVersion] = useState(0)
   const isMobile = useIsMobile()
+  const app = App.useApp()
   void version // trigger re-render after mutating the mock record in place
 
   if (!canViewContracts(actor)) {
@@ -54,6 +56,11 @@ export function ContractDetailPage() {
 
   const canManage = canManageContract(actor, contract)
   const canEditFields = canEditContractFields(actor, contract)
+  const canClose = canCloseContract(actor, contract)
+  // The creator could edit up to the moment a manager started review —
+  // show Edit as locked rather than having it simply vanish, so they know
+  // why they can't change anything now.
+  const editLockedForReview = contract.status === 'under_review' && contract.createdBy === actor.id && canManage
 
   // Defensive, idempotent recompute on every view (a no-op before
   // activation — see the function's own guard) — this is what makes an
@@ -69,6 +76,8 @@ export function ContractDetailPage() {
 
   const hasSchedule = contract.schedule.some(s => s.period > 0)
 
+  const confirmClose = () => confirmCloseContract(app, contract!, actor, refresh)
+
   function goToEdit() {
     navigate(`/contracts/${contract!.id}/edit`)
   }
@@ -78,12 +87,14 @@ export function ContractDetailPage() {
   // "…"; otherwise Edit is the next step itself (Draft, Rejected) and takes
   // the bar as the primary button.
   const lifecycleInBar = canManage && hasLifecycleAction(contract, actor)
+  const mobileMore = [
+    ...(lifecycleInBar && canEditFields ? [{ key: 'edit', label: 'Edit', icon: <Pencil size={16} strokeWidth={2.25} />, onClick: goToEdit }] : []),
+    // Rejected: Edit (to resubmit) stays the primary button; Close sits
+    // behind "…" as the less common way out.
+    ...(canClose ? [{ key: 'close', label: 'Close Contract', icon: <CircleX size={16} strokeWidth={2.25} />, danger: true, onClick: confirmClose }] : []),
+  ]
   const mobileActions = isMobile && (
-    <MobileActionBar
-      more={lifecycleInBar && canEditFields
-        ? [{ key: 'edit', label: 'Edit', icon: <Pencil size={16} strokeWidth={2.25} />, onClick: goToEdit }]
-        : []}
-    >
+    <MobileActionBar more={mobileMore}>
       {lifecycleInBar
         ? <LifecycleActions contract={contract} actor={actor} onChanged={refresh} />
         : canEditFields && (
@@ -105,6 +116,13 @@ export function ContractDetailPage() {
               <Button icon={<Pencil size={16} strokeWidth={2.25} />} onClick={goToEdit}>
                 Edit
               </Button>
+            )}
+            {editLockedForReview && (
+              <Tooltip title="Editing is locked while a manager reviews this contract.">
+                <Button icon={<Lock size={16} strokeWidth={2.25} />} disabled>
+                  Edit
+                </Button>
+              </Tooltip>
             )}
             {canManage && <LifecycleActions contract={contract} actor={actor} onChanged={refresh} />}
           </Space>

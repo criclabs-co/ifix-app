@@ -121,6 +121,14 @@ export function canEditContractFields(actor: AuthUser, contract: Contract): bool
   return contract.status === 'draft' || contract.status === 'pending_approval' || contract.status === 'rejected'
 }
 
+// Close — the way out of Rejected when the contract won't be fixed and
+// resubmitted (the manager turned it down for good, the customer walked
+// away). Open to anyone who can manage the contract, like the other
+// lifecycle steps; only Rejected can be closed, and Closed is final.
+export function canCloseContract(actor: AuthUser, contract: Contract): boolean {
+  return contract.status === 'rejected' && canManageContract(actor, contract)
+}
+
 // Approval routing per the doc: Staff submissions go to Pending Approval
 // and need a Branch Manager (or Admin/Owner, standing in where a branch has
 // none assigned) to review; BM/Admin/Owner submissions auto-approve, so

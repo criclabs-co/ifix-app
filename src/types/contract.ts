@@ -249,6 +249,10 @@ export interface Contract {
   approvedAt: string | null
   rejectedBy: string | null
   rejectedAt: string | null
+  // Set when a Rejected contract is closed instead of resubmitted (see
+  // closeContract) — optional so older mock records needn't carry it.
+  closedBy?: string | null
+  closedAt?: string | null
   activatedAt: string | null
   settledAt: string | null
 }

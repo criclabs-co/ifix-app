@@ -10,6 +10,9 @@ interface Props {
   // Read-only mode — existing photos stay visible, but the add tile and the
   // per-photo remove action are both withdrawn.
   disabled?: boolean
+  // Lets the file picker take several photos at once (still capped at
+  // maxCount). Off by default so single-photo fields keep a single pick.
+  multiple?: boolean
 }
 
 function fileToDataUrl(file: File): Promise<string> {
@@ -23,7 +26,7 @@ function fileToDataUrl(file: File): Promise<string> {
 
 // No real backend — files are read as data URLs and kept in-memory on the
 // record itself, same convention as the rest of this prototype's mock data.
-export function PhotoUpload({ value = [], onChange, maxCount = 4, disabled = false }: Props) {
+export function PhotoUpload({ value = [], onChange, maxCount = 4, disabled = false, multiple = false }: Props) {
   const { token } = theme.useToken()
   const iconColors = useIconColors()
 
@@ -40,11 +43,17 @@ export function PhotoUpload({ value = [], onChange, maxCount = 4, disabled = fal
         listType="picture-card"
         fileList={fileList}
         maxCount={maxCount}
+        multiple={multiple}
         disabled={disabled}
         showUploadList={{ showRemoveIcon: !disabled }}
-        beforeUpload={async file => {
-          const dataUrl = await fileToDataUrl(file as unknown as File)
-          onChange?.([...value, dataUrl].slice(0, maxCount))
+        // antd calls this once per picked file; with several picked at once,
+        // each call would only see the value from before the batch. So the
+        // first file of a batch reads them all and commits once.
+        beforeUpload={(file, batch) => {
+          if (file === batch[0]) {
+            Promise.all(batch.map(f => fileToDataUrl(f as unknown as File)))
+              .then(urls => onChange?.([...value, ...urls].slice(0, maxCount)))
+          }
           return false
         }}
         onRemove={file => {

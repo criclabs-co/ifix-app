@@ -13,6 +13,7 @@ import { ScheduleTab } from './detail/ScheduleTab'
 import { PaymentHistoryTab } from './detail/PaymentHistoryTab'
 import { PenaltyTab } from './detail/PenaltyTab'
 import { ContractPreviewTab } from './detail/ContractPreviewTab'
+import { DevicePhotosTab } from './detail/DevicePhotosTab'
 import { LifecycleActions } from './components/LifecycleActions'
 import { PageEmptyState } from '../../components/PageEmptyState'
 import { MobileActionBar } from '../../components/MobileActionBar'
@@ -150,6 +151,13 @@ export function ContractDetailPage() {
                 <PaymentHistoryTab contract={contract} actor={actor} onChanged={refresh} />
               </>
             ),
+          },
+          // Box photos from creation, then (once activated — the device is
+          // handed over and unboxed at the down payment) unboxing photos.
+          {
+            key: 'photos',
+            label: 'Device Photos',
+            children: <DevicePhotosTab contract={contract} actor={actor} canAdd={canManage && contract.status !== 'closed'} activated={hasSchedule} onChanged={refresh} />,
           },
           ...(hasSchedule ? [{
             key: 'penalty',

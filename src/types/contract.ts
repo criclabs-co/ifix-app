@@ -140,6 +140,17 @@ export interface ContractPaymentRecord {
 // same shape as ProductUnit's own UnitPhotos (captured once at unit
 // registration) — contract creation re-displays those as a starting point
 // but photos here are the contract's own copy, not a live reference.
+// One photo per guided slot (what to shoot — see unboxingSlots), plus any
+// extras under `other`. Every slot is optional.
+export interface UnboxingPhotos {
+  frontScreen?: string
+  backCover?: string
+  // IMEI screen, or the serial number screen on a Wi-Fi-only device.
+  idScreen?: string
+  boxContents?: string
+  other?: string[]
+}
+
 export interface DevicePhotos {
   front?: string
   back?: string
@@ -217,6 +228,12 @@ export interface Contract {
   branch: string
   device: DeviceSnapshot
   devicePhotos: DevicePhotos
+  // Optional photos of the device taken out of its box in front of the
+  // customer, at handover (activation) or any time after — never required,
+  // so activation doesn't wait on them. See constants/unboxingPhotos.ts.
+  unboxingPhotos?: UnboxingPhotos
+  unboxingPhotosUpdatedBy?: string | null
+  unboxingPhotosUpdatedAt?: string | null
   idCardPhotos: IdCardPhotos
   // Links back to the Customer record used to create this contract — kept
   // for "contract history" lookups from a future Customer detail page.

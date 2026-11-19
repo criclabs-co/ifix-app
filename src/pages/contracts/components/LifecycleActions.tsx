@@ -4,15 +4,17 @@ import { InputNumber } from '../../../components/AppInputNumber'
 import { Check, CircleX, X, Printer, Upload, Wallet } from 'lucide-react'
 import { Select } from '../../../components/AppSelect'
 import type { AuthUser } from '../../../types/installment'
-import type { Contract, ContractPaymentRecord, SignedContractFile } from '../../../types/contract'
+import type { Contract, ContractPaymentRecord, SignedContractFile, UnboxingPhotos } from '../../../types/contract'
 import { canApproveContract, canCloseContract } from '../../../constants/roles'
 import { confirmCloseContract } from './confirmCloseContract'
-import { getOutstandingBalance, buildActivationSchedule } from '../../../utils/contract'
+import { getOutstandingBalance, buildActivationSchedule, addUnboxingPhotos } from '../../../utils/contract'
 import { MOCK_PRODUCT_UNITS } from '../../../constants/mockProductUnits'
 import { PhotoUpload } from '../../../components/PhotoUpload'
 import { SignedCopyUpload } from './SignedCopyUpload'
 import { ContractPrintCopy } from './ContractPrintCopy'
 import { useAppWindowContainer } from '../../../contexts/AppWindowContext'
+import { filledSlotCount, UNBOXING_SLOT_COUNT } from '../../../constants/unboxingPhotos'
+import { UnboxingPhotosField } from './UnboxingPhotosField'
 
 interface Props {
   contract: Contract
@@ -35,6 +37,9 @@ export function LifecycleActions({ contract, actor, onChanged }: Props) {
   const [paymentForm] = Form.useForm()
   const [uploadForm] = Form.useForm()
   const uploadedFiles = Form.useWatch('files', uploadForm) as SignedContractFile[] | undefined
+  const unboxingPhotos = Form.useWatch('unboxingPhotos', paymentForm) as UnboxingPhotos | undefined
+  const slotsFilled = filledSlotCount(unboxingPhotos)
+  const anyUnboxing = slotsFilled + (unboxingPhotos?.other?.length ?? 0) > 0
   const confirmClose = () => confirmCloseContract(app, contract, actor, onChanged)
 
   function startReview() {
@@ -111,7 +116,7 @@ export function LifecycleActions({ contract, actor, onChanged }: Props) {
     onChanged()
   }
 
-  function handleRecordPayment(values: { amount: number; method: ContractPaymentRecord['method']; slipPhotos: string[] }) {
+  function handleRecordPayment(values: { amount: number; method: ContractPaymentRecord['method']; slipPhotos: string[]; unboxingPhotos?: UnboxingPhotos }) {
     const { schedule, payments } = buildActivationSchedule(contract.financing, actor.id)
     // The doc's activation trigger is recording the down payment — the
     // amount/method entered here become that first payment row instead of
@@ -122,6 +127,9 @@ export function LifecycleActions({ contract, actor, onChanged }: Props) {
     contract.payments = payments
     contract.status = 'active'
     contract.activatedAt = new Date().toISOString()
+    // Optional — saved only when some were added; otherwise the contract's
+    // Unboxing Photos tab asks for them later.
+    addUnboxingPhotos(contract, values.unboxingPhotos ?? {}, actor.id)
     // The device actually leaves the merchant's hands right here, not at
     // Settled (which only means the debt's paid off) — so this is the
     // real-world "sale" moment, mirroring what the Products module does
@@ -134,7 +142,9 @@ export function LifecycleActions({ contract, actor, onChanged }: Props) {
     }
     setPaymentOpen(false)
     paymentForm.resetFields()
-    message.success('Down payment recorded — contract is now Active')
+    message.success(anyUnboxing
+      ? 'Down payment recorded — contract is now Active'
+      : 'Contract is now Active — add unboxing photos any time under Device Photos')
     onChanged()
   }
 
@@ -260,7 +270,15 @@ export function LifecycleActions({ contract, actor, onChanged }: Props) {
           footer={
             <Space style={{ display: 'flex', justifyContent: 'flex-end' }}>
               <Button onClick={() => setPaymentOpen(false)}>Cancel</Button>
-              <Button type="primary" onClick={() => paymentForm.validateFields().then(handleRecordPayment)}>Record & Activate</Button>
+              {/* Says so outright when no unboxing photos were added, so
+                  activating without them is a deliberate choice. */}
+              <Button type="primary" onClick={() => paymentForm.validateFields().then(handleRecordPayment)}>
+                {!anyUnboxing
+                  ? 'Activate Without Unboxing Photos'
+                  : slotsFilled < UNBOXING_SLOT_COUNT
+                  ? `Activate · ${slotsFilled} of ${UNBOXING_SLOT_COUNT} Photos`
+                  : 'Record & Activate'}
+              </Button>
             </Space>
           }
         >
@@ -276,6 +294,12 @@ export function LifecycleActions({ contract, actor, onChanged }: Props) {
                 down payment, kept on that payment row like any other slip. */}
             <Form.Item label="Payment Slip Photo" name="slipPhotos" rules={[{ required: true, message: 'Required' }]}>
               <PhotoUpload />
+            </Form.Item>
+            <Form.Item label="Unboxing Photos" name="unboxingPhotos">
+              <UnboxingPhotosField
+                device={contract.device}
+                intro="Optional. Take these with the customer once the box is opened, or add them later under Device Photos."
+              />
             </Form.Item>
           </Form>
         </Drawer>

@@ -1,7 +1,8 @@
 import dayjs from 'dayjs'
-import type { Contract, ContractPaymentRecord, FinancingTerms, ScheduleItem, CollectionFeeRecord, PenaltyAdjustment } from '../types/contract'
+import type { Contract, ContractPaymentRecord, FinancingTerms, ScheduleItem, CollectionFeeRecord, PenaltyAdjustment, UnboxingPhotos } from '../types/contract'
 import type { Merchant } from '../types/merchant'
 import type { PenaltyRule } from '../types/contractTemplate'
+import { MAX_OTHER_UNBOXING_PHOTOS, unboxingPhotoCount } from '../constants/unboxingPhotos'
 
 // Derived, not stored — the doc's List Contract columns (outstanding
 // balance, next due, overdue days, net position) are all computable from
@@ -31,6 +32,23 @@ export function submitContractForApproval(contract: Contract, actorId: string, a
 export function remainingDue(item: ScheduleItem): number {
   if (item.status === 'paid' || item.status === 'paid_late') return 0
   return Math.max(0, item.amount - (item.paidAmount ?? 0) - (item.creditAmount ?? 0))
+}
+
+// Merges post-unboxing photos into the contract (optional, add-only — a
+// slot that already has a photo keeps it; see DevicePhotosTab). Extras are
+// capped so the total stays within MAX_UNBOXING_PHOTOS.
+export function addUnboxingPhotos(contract: Contract, photos: UnboxingPhotos, actorId: string): void {
+  if (unboxingPhotoCount(photos) === 0) return
+  const current = contract.unboxingPhotos ?? {}
+  contract.unboxingPhotos = {
+    frontScreen: current.frontScreen ?? photos.frontScreen,
+    backCover: current.backCover ?? photos.backCover,
+    idScreen: current.idScreen ?? photos.idScreen,
+    boxContents: current.boxContents ?? photos.boxContents,
+    other: [...(current.other ?? []), ...(photos.other ?? [])].slice(0, MAX_OTHER_UNBOXING_PHOTOS),
+  }
+  contract.unboxingPhotosUpdatedBy = actorId
+  contract.unboxingPhotosUpdatedAt = new Date().toISOString()
 }
 
 // Rejected → Closed. The unit was already released back to available when

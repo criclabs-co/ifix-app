@@ -71,7 +71,7 @@ interface CustomerValues {
 // Same 5-step wizard as CreateContractPage, prefilled from an existing
 // Draft/Pending Approval/Rejected contract instead of starting blank —
 // per the doc's Contract Status Matrix, those are the only statuses ever
-// editable, and only by the contract's own creator (canEditContractFields).
+// editable, by anyone who can manage the contract (canEditContractFields).
 // Saving mutates the existing contract in place (same id/contractNumber)
 // rather than creating a new one, then applies the same submit-for-
 // approval transition Draft/Rejected already used at creation — this is
@@ -105,7 +105,9 @@ export function EditContractPage() {
       <PageEmptyState
         icon={<Lock size={22} strokeWidth={2.25} />}
         title="You can't edit this contract"
-        description="Only the contract's own creator can edit it, and only while it's Draft, Pending Approval, or Rejected."
+                description={maybeContract.status === 'under_review'
+          ? "It's being reviewed by a manager. Editing opens again if it's rejected."
+          : "Contracts can only be edited while they're Draft, Pending Approval, or Rejected."}
         action={<Button onClick={() => navigate(`/contracts/${maybeContract.id}`)}>Back to contract</Button>}
       />
     )

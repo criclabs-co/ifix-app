@@ -2,6 +2,7 @@ import dayjs from 'dayjs'
 import type { Contract, ContractPaymentRecord, FinancingTerms, ScheduleItem, CollectionFeeRecord, PenaltyAdjustment, UnboxingPhotos } from '../types/contract'
 import type { Merchant } from '../types/merchant'
 import type { PenaltyRule } from '../types/contractTemplate'
+import { MOCK_USER_ACCOUNTS } from '../constants/mockUsers'
 import { MAX_OTHER_UNBOXING_PHOTOS, unboxingPhotoCount } from '../constants/unboxingPhotos'
 
 // Derived, not stored — the doc's List Contract columns (outstanding
@@ -11,20 +12,30 @@ import { MAX_OTHER_UNBOXING_PHOTOS, unboxingPhotoCount } from '../constants/unbo
 // Shared "submit for approval" transition — used both by CreateContractPage
 // (fresh contract, actor === creator by construction) and EditContractPage
 // (Draft/Rejected edit-and-resubmit). Staff submissions go to Pending
-// Approval; BM/Admin/Owner submissions auto-approve, per the doc. Mutates
-// the contract in place, matching how LifecycleActions' other transitions
-// work.
+// Approval; BM/Admin/Owner submissions auto-approve, per the doc — but only
+// on a contract a manager created. A Staff-created contract always goes
+// back to Pending Approval for review, even when a manager edits and
+// resubmits it (see needsReview). Mutates the contract in place, matching
+// how LifecycleActions' other transitions work.
 export function submitContractForApproval(contract: Contract, actorId: string, actorRole: string): void {
   const now = new Date().toISOString()
   contract.submittedBy = actorId
   contract.submittedAt = now
-  if (actorRole === 'staff') {
+  if (needsReview(contract, actorRole)) {
     contract.status = 'pending_approval'
   } else {
     contract.status = 'approved'
     contract.approvedBy = actorId
     contract.approvedAt = now
   }
+}
+
+// Whether submitting this contract routes it to review rather than
+// approving it outright: when Staff submits it, or when Staff created it
+// (a manager resubmitting a Staff contract still sends it for review).
+export function needsReview(contract: Pick<Contract, 'createdBy'>, actorRole: string): boolean {
+  if (actorRole === 'staff') return true
+  return MOCK_USER_ACCOUNTS.find(u => u.id === contract.createdBy)?.role === 'staff'
 }
 
 // What's still owed on one schedule item — its amount less any partial

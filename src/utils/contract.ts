@@ -86,6 +86,8 @@ export function closeContract(contract: Contract, actorId: string): void {
 }
 
 export function getOutstandingBalance(contract: Contract): number {
+  // Nothing is owed until activation, though the schedule exists earlier.
+  if (!isActivated(contract)) return 0
   return contract.schedule.reduce((sum, s) => sum + remainingDue(s), 0)
 }
 
@@ -132,31 +134,77 @@ export function generateContractNumber(
   return merchant.contractPrefix ? `${merchant.contractPrefix}-${yyyy}${mm}${dd}-${seq}` : `${yyyy}${mm}${dd}-${seq}`
 }
 
-// Generates the down-payment-plus-installments schedule at activation, per
-// the doc ("Payment schedule — generated at activation"). Down payment is
-// recorded as already paid (it's what triggers the transition into Active
-// in the first place); every installment starts as a future row.
+// The default First Payment Date: the 1st of the month after the contract
+// is created (created 15 Dec → due 1 Jan).
+export function defaultFirstPaymentDate(createdOn: dayjs.ConfigType = undefined): string {
+  return dayjs(createdOn).add(1, 'month').startOf('month').format('YYYY-MM-DD')
+}
+
+// Installment due dates, monthly on the first payment date's day. A month
+// without that day uses its last day, and later months go back to the
+// chosen day (31 Jan → 28/29 Feb → 31 Mar → 30 Apr). Each date is counted
+// from the first one, never from the month before, so a short month can't
+// drag every later date earlier.
+export function installmentDueDates(firstPaymentDate: string, count: number): string[] {
+  const first = dayjs(firstPaymentDate)
+  return Array.from({ length: count }, (_, i) => first.add(i, 'month').format('YYYY-MM-DD'))
+}
+
+function ordinal(n: number): string {
+  const tens = n % 100
+  if (tens >= 11 && tens <= 13) return `${n}th`
+  return `${n}${['th', 'st', 'nd', 'rd'][n % 10] ?? 'th'}`
+}
+
+// The line under the First Payment Date field: how the rest follow from it.
+export function firstPaymentDateHint(firstPaymentDate: string | undefined): string {
+  const day = firstPaymentDate ? dayjs(firstPaymentDate).date() : 1
+  return day > 28
+    ? `Later installments are due on the ${ordinal(day)} of each month, or the last day of a shorter month.`
+    : `Later installments are due on the ${ordinal(day)} of each month.`
+}
+
+// Whether the contract has been activated (down payment recorded). Its
+// schedule exists from creation, but nothing on it is due — and nothing is
+// owed — until then.
+export function isActivated(contract: Pick<Contract, 'activatedAt'>): boolean {
+  return !!contract.activatedAt
+}
+
+// The payment schedule as soon as the contract is created: the down
+// payment (its own row, paid on the day the contract is activated) and
+// then each installment on its due date. Every row is Upcoming until
+// activation (buildActivationSchedule), so nothing reads as due or owed
+// before the contract is live.
+export function buildPlannedSchedule(financing: FinancingTerms, firstPaymentDate: string, createdOn?: string): ScheduleItem[] {
+  const schedule: ScheduleItem[] = [
+    { period: 0, label: 'Down Payment', dueDate: dayjs(createdOn).format('YYYY-MM-DD'), amount: financing.downPaymentAmount, paidDate: null, status: 'future' },
+  ]
+  installmentDueDates(firstPaymentDate, financing.paymentTermMonths).forEach((dueDate, i) => {
+    schedule.push({ period: i + 1, label: `Installment ${i + 1}`, dueDate, amount: financing.installmentAmount, paidDate: null, status: 'future' })
+  })
+  return schedule
+}
+
+// Activation, per the doc: recording the down payment makes the contract
+// live. The schedule built at creation is kept — its installment dates
+// came from the First Payment Date chosen then — with the down payment
+// marked paid today and the first installment now Due. (A contract with no
+// schedule yet, from before schedules were built at creation, gets one
+// here from the default first payment date.)
 export function buildActivationSchedule(
-  financing: FinancingTerms,
+  contract: Pick<Contract, 'financing' | 'schedule' | 'firstPaymentDate'>,
   downPaymentReceivedBy: string,
 ): { schedule: ScheduleItem[]; payments: ContractPaymentRecord[] } {
   const today = dayjs().format('YYYY-MM-DD')
-  const schedule: ScheduleItem[] = [
-    { period: 0, label: 'Down Payment', dueDate: today, amount: financing.downPaymentAmount, paidDate: today, status: 'paid' },
-  ]
-  for (let i = 1; i <= financing.paymentTermMonths; i++) {
-    const dueDate = dayjs().add(i, 'month').format('YYYY-MM-DD')
-    schedule.push({
-      period: i,
-      label: `Installment ${i}`,
-      dueDate,
-      amount: financing.installmentAmount,
-      paidDate: null,
-      status: i === 1 ? 'due' : 'future',
-    })
-  }
+  const planned = contract.schedule.some(s => s.period > 0)
+    ? contract.schedule
+    : buildPlannedSchedule(contract.financing, contract.firstPaymentDate ?? defaultFirstPaymentDate())
+  const schedule: ScheduleItem[] = planned.map(item => item.period === 0
+    ? { ...item, dueDate: today, paidDate: today, status: 'paid' }
+    : { ...item, paidDate: null, status: item.period === 1 ? 'due' : 'future' })
   const payments: ContractPaymentRecord[] = [
-    { id: `pay-${Date.now()}`, period: 0, paymentDate: today, amount: financing.downPaymentAmount, method: 'transfer', receivedBy: downPaymentReceivedBy, note: 'Down payment' },
+    { id: `pay-${Date.now()}`, period: 0, paymentDate: today, amount: contract.financing.downPaymentAmount, method: 'transfer', receivedBy: downPaymentReceivedBy, note: 'Down payment' },
   ]
   return { schedule, payments }
 }
@@ -216,7 +264,7 @@ export function recalculateSchedule(contract: Contract): void {
   // point — see buildActivationSchedule) — calling this defensively on
   // every page load, say, must never invent an "active" status for a
   // Draft/Approved/etc. contract that simply has no installments yet.
-  if (!contract.schedule.some(s => s.period > 0)) return
+  if (!isActivated(contract) || !contract.schedule.some(s => s.period > 0)) return
 
   const orderedPayments = contract.payments
     .filter(p => p.period > 0 && !p.voided)

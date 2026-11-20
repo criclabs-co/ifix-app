@@ -146,7 +146,7 @@ export function QuoteView({ actor, group, units, preferredBranch, matchedUnitId,
   const term = template ? termsOf(template).find(t => t.months === termMonths) : undefined
   const ratePercent = template?.type === 'fixed_rate' ? term?.ratePercent : freeRate ?? undefined
   const financing = template && termMonths && ratePercent != null && devicePrice
-    ? financingFor(devicePrice, downPct, ratePercent, termMonths)
+    ? financingFor(devicePrice, downPct, ratePercent, termMonths, template.installmentRounding)
     : undefined
   const loanAmount = financing ? financing.devicePrice - financing.downPaymentAmount : 0
   const overLimit = !!template && !!financing && loanAmount > template.maxLoanAmount
@@ -305,6 +305,7 @@ export function QuoteView({ actor, group, units, preferredBranch, matchedUnitId,
               onChange={r => setFreeRate(r ?? null)}
               loanAmount={devicePrice - Math.round(devicePrice * downPct / 100)}
               months={termMonths}
+              rounding={template.installmentRounding}
             />
           </Form.Item>
         )}

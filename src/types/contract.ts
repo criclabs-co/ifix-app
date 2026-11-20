@@ -8,7 +8,7 @@
 // types/installment.ts itself is left alone — AuthUser/UserRole/
 // ScheduleResult there are shared far outside this module (Products pages,
 // roles.ts) and aren't part of the rename.
-import type { CommissionRule, ContractSection, ContractTemplateType, PenaltyRule } from './contractTemplate'
+import type { CommissionRule, ContractSection, ContractTemplateType, InstallmentRounding, PenaltyRule } from './contractTemplate'
 import type { IdType } from '../utils/idNumber'
 
 // The doc's full lifecycle. Defaulted/Closed are explicitly called out as
@@ -82,6 +82,7 @@ export interface TemplateSnapshot {
   // contract was created. Absent on older contracts (default layout).
   sections?: ContractSection[]
   commission?: CommissionRule
+  installmentRounding?: InstallmentRounding
 }
 
 export interface FinancingTerms {
@@ -95,8 +96,8 @@ export interface FinancingTerms {
 }
 
 // period 0 is always the down payment row; 1..n are the monthly
-// installments. Generated at activation per the doc — draft/pending/
-// approved-stage contracts carry an empty schedule.
+// installments. Built when the contract is created (buildPlannedSchedule),
+// every row Upcoming until activation marks the down payment paid.
 export interface ScheduleItem {
   period: number
   label: string
@@ -243,6 +244,10 @@ export interface Contract {
   customer: CustomerSnapshot
   template: TemplateSnapshot
   financing: FinancingTerms
+  // The first installment's due date, chosen on Template & Terms; later
+  // installments fall on the same day each month (installmentDueDates).
+  // Optional only so older records needn't carry it.
+  firstPaymentDate?: string
   schedule: ScheduleItem[]
   payments: ContractPaymentRecord[]
   collectionFees: CollectionFeeRecord[]

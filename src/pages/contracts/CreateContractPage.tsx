@@ -12,6 +12,7 @@ import { Select } from '../../components/AppSelect'
 import { TermChips } from '../../components/TermChips'
 import { DownPaymentField } from '../../components/DownPaymentField'
 import { InterestField } from '../../components/InterestField'
+import { FirstPaymentDateField } from './components/FirstPaymentDateField'
 import { PhotoUpload } from '../../components/PhotoUpload'
 import { BoxPhotosInput } from './components/BoxPhotosInput'
 import { PhotoReminder } from './components/PhotoReminder'
@@ -29,7 +30,7 @@ import { MOCK_CUSTOMERS, findCustomerByNationalId, generateCustomerId } from '..
 import { MOCK_CONTRACTS, generateContractId } from '../../constants/mockContracts'
 import { FREE_RATE_TERMS, defaultTemplateOf, financingFor, preferredTermOf, clampDown, selectableTemplatesFor, type QuoteHandoff } from '../../utils/quote'
 import type { ContractTemplate } from '../../types/contractTemplate'
-import { generateContractNumber, submitContractForApproval } from '../../utils/contract'
+import { buildPlannedSchedule, defaultFirstPaymentDate, generateContractNumber, submitContractForApproval } from '../../utils/contract'
 import { canCreateContract } from '../../constants/roles'
 import type { Contract, DevicePhotos } from '../../types/contract'
 import type { Customer } from '../../types/customer'
@@ -43,7 +44,7 @@ import { IdNumberField } from '../../components/IdNumberField'
 import { contractConditionOf, isSellable } from '../../utils/product'
 
 interface DeviceValues { branch: string; productId: string; unitId: string; source: DeviceSource }
-interface TemplateValues { templateId: string; termMonths: number; ratePercent: number; downPaymentPercent: number }
+interface TemplateValues { templateId: string; termMonths: number; ratePercent: number; downPaymentPercent: number; firstPaymentDate: string }
 interface DeviceInfoValues {
   imei1?: string
   imei2?: string
@@ -103,7 +104,7 @@ export function CreateContractPage() {
   // back off the (by-then-unmounted) Form.
   const [device, setDevice] = useState<DeviceValues | null>(null)
   const [templateValues, setTemplateValues] = useState<TemplateValues | null>(
-    quote ? { templateId: quote.templateId, termMonths: quote.termMonths, ratePercent: quote.ratePercent, downPaymentPercent: quote.downPaymentPercent } : null,
+    quote ? { templateId: quote.templateId, termMonths: quote.termMonths, ratePercent: quote.ratePercent, downPaymentPercent: quote.downPaymentPercent, firstPaymentDate: defaultFirstPaymentDate() } : null,
   )
   const [deviceInfo, setDeviceInfo] = useState<DeviceInfoValues | null>(null)
   const [customerValues, setCustomerValues] = useState<CustomerValues | null>(null)
@@ -285,6 +286,7 @@ export function CreateContractPage() {
       templateValues!.downPaymentPercent,
       templateValues!.ratePercent,
       templateValues!.termMonths,
+      selectedTemplate?.installmentRounding,
     )
   }
 
@@ -387,9 +389,13 @@ export function CreateContractPage() {
         penalty: selectedTemplate!.penalty,
         sections: normalizeSections(selectedTemplate!.sections),
         commission: selectedTemplate!.commission,
+        installmentRounding: selectedTemplate!.installmentRounding,
       },
       financing,
-      schedule: [],
+      firstPaymentDate: templateValues.firstPaymentDate,
+      // Built now, not at activation, so the installments can be checked
+      // (and printed on the contract) before the down payment.
+      schedule: buildPlannedSchedule(financing, templateValues.firstPaymentDate),
       payments: [],
       collectionFees: [],
       penaltyAdjustments: [],
@@ -492,6 +498,8 @@ export function CreateContractPage() {
               ratePercent: defaultTerm?.ratePercent,
               // The template's smallest down payment, as a quote opens on.
               downPaymentPercent: defaultTemplate?.minDownPaymentPercent,
+              // The 1st of next month (created 15 Dec → 1 Jan).
+              firstPaymentDate: defaultFirstPaymentDate(),
             }}
           >
             <Form.Item label="Contract Template" name="templateId" rules={[{ required: true, message: 'Required' }]}>
@@ -540,11 +548,21 @@ export function CreateContractPage() {
                     <InterestField
                       loanAmount={termsDevicePrice - Math.round(termsDevicePrice * (watchedDown ?? 0) / 100)}
                       months={watchedTerm}
+                      rounding={selectedTemplate.installmentRounding}
                     />
                   </Form.Item>
                 ) : (
                   <Form.Item name="ratePercent" hidden><InputNumber /></Form.Item>
                 )}
+                {/* The first installment's due date — the down payment is
+                    separate, paid at activation. */}
+                <Form.Item
+                  label="First Payment Date"
+                  name="firstPaymentDate"
+                  rules={[{ required: true, message: 'Required' }]}
+                >
+                  <FirstPaymentDateField />
+                </Form.Item>
               </>
             )}
 
@@ -745,6 +763,7 @@ export function CreateContractPage() {
                   { label: 'Term', children: `${financing.paymentTermMonths} months` },
                   { label: 'Monthly Installment', children: <CurrencyDisplay amount={financing.installmentAmount} /> },
                   { label: 'Total Contract Value', children: <CurrencyDisplay amount={financing.totalContractValue} /> },
+                  { label: 'First Payment Date', children: dayjs(templateValues!.firstPaymentDate).format('D MMM YYYY') },
                 ]}
               />
 

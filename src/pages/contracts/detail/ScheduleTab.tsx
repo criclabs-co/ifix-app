@@ -14,7 +14,7 @@ import { Select } from '../../../components/AppSelect'
 import { useAppWindowContainer } from '../../../contexts/AppWindowContext'
 import { ScheduleStatusTag } from '../components/ScheduleStatusTag'
 import { canRecordPayment } from '../../../constants/roles'
-import { getNextDue, recordPayment, remainingDue } from '../../../utils/contract'
+import { getNextDue, isActivated, recordPayment, remainingDue } from '../../../utils/contract'
 import { useIsMobile } from '../../../components/useIsMobile'
 import { MobileTableRow } from '../../../components/MobileTableRow'
 import { MOBILE_TABLE_PROPS, mobileColumns, tablePanelPadding } from '../../../components/mobileTable'
@@ -107,7 +107,14 @@ export function ScheduleTab({ contract, actor, onChanged }: Props) {
         paddingRight: canRecord ? 8 : 16,
         boxShadow: `inset 0 -0.5px 0 0 ${token.colorBorderSecondary}`,
       }}>
-        <Typography.Text strong style={{ fontSize: 15 }}>Payment Schedule</Typography.Text>
+        {/* Before activation the schedule is the plan: every row Upcoming,
+            nothing due until the down payment is recorded. */}
+        <Space size={8} align="baseline" style={{ minWidth: 0 }}>
+          <Typography.Text strong style={{ fontSize: 15 }}>Payment Schedule</Typography.Text>
+          {!isActivated(contract) && contract.schedule.length > 0 && (
+            <Typography.Text type="secondary">Starts once the down payment is recorded</Typography.Text>
+          )}
+        </Space>
         {canRecord && (
           <Button icon={<Wallet size={16} strokeWidth={2.25} />} onClick={openModal}>Record Payment</Button>
         )}
@@ -134,7 +141,7 @@ export function ScheduleTab({ contract, actor, onChanged }: Props) {
                   <TableEmptyState
                     icon={<CalendarClock size={22} strokeWidth={2.25} />}
                     title="No schedule yet"
-                    description="The payment schedule is generated once the contract is activated."
+                    description="The payment schedule shows up here once the contract's terms are set."
                   />
                 ),
               }}

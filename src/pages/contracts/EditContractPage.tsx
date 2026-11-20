@@ -12,6 +12,7 @@ import { Select } from '../../components/AppSelect'
 import { TermChips } from '../../components/TermChips'
 import { DownPaymentField } from '../../components/DownPaymentField'
 import { InterestField } from '../../components/InterestField'
+import { FirstPaymentDateField } from './components/FirstPaymentDateField'
 import { clampDown, preferredTermOf } from '../../utils/quote'
 import { PhotoUpload } from '../../components/PhotoUpload'
 import { BoxPhotosInput } from './components/BoxPhotosInput'
@@ -28,8 +29,8 @@ import { MOCK_PRODUCT_UNITS } from '../../constants/mockProductUnits'
 import { activeTemplatesFor, MOCK_CONTRACT_TEMPLATES } from '../../constants/mockContractTemplates'
 import { MOCK_CUSTOMERS, findCustomerByNationalId, generateCustomerId } from '../../constants/mockCustomers'
 import { MOCK_CONTRACTS } from '../../constants/mockContracts'
-import { calcFixRate } from '../../utils/calculator'
-import { needsReview, submitContractForApproval } from '../../utils/contract'
+import { calcFixRate, toSatang } from '../../utils/calculator'
+import { buildPlannedSchedule, defaultFirstPaymentDate, needsReview, submitContractForApproval } from '../../utils/contract'
 import { canEditContractFields, isMerchantAdminOrAbove, scopedContractList } from '../../constants/roles'
 import { BoxLabelNote } from './components/BoxLabelNote'
 import { SelectDevice, type DeviceChoice, type DeviceSource } from './components/SelectDevice'
@@ -47,7 +48,7 @@ import { contractConditionOf } from '../../utils/product'
 const FREE_RATE_TERMS = [3, 6, 10, 12, 18, 24]
 
 interface DeviceValues { branch: string; productId: string; unitId: string; source: DeviceSource }
-interface TemplateValues { templateId: string; termMonths: number; ratePercent: number; downPaymentPercent: number }
+interface TemplateValues { templateId: string; termMonths: number; ratePercent: number; downPaymentPercent: number; firstPaymentDate: string }
 interface DeviceInfoValues {
   imei1?: string
   imei2?: string
@@ -153,6 +154,8 @@ export function EditContractPage() {
     termMonths: contract.financing.paymentTermMonths,
     ratePercent: contract.financing.ratePercent,
     downPaymentPercent: contract.financing.downPaymentPercent,
+    // Older contracts saved before the field existed get the default.
+    firstPaymentDate: contract.firstPaymentDate ?? defaultFirstPaymentDate(),
   })
   const [deviceInfo, setDeviceInfo] = useState<DeviceInfoValues | null>({
     imei1: contract.device.imei1,
@@ -267,7 +270,7 @@ export function EditContractPage() {
     const devicePrice = unit.customPrice ?? product.salesPrice
     const downPaymentAmount = Math.round(devicePrice * templateValues!.downPaymentPercent / 100)
     const loanAmount = devicePrice - downPaymentAmount
-    const calc = calcFixRate(loanAmount, templateValues!.ratePercent, templateValues!.termMonths)
+    const calc = calcFixRate(loanAmount, templateValues!.ratePercent, templateValues!.termMonths, selectedTemplate?.installmentRounding)
     return {
       devicePrice,
       downPaymentPercent: templateValues!.downPaymentPercent,
@@ -275,7 +278,7 @@ export function EditContractPage() {
       ratePercent: templateValues!.ratePercent,
       paymentTermMonths: templateValues!.termMonths,
       installmentAmount: calc.monthlyInstallment,
-      totalContractValue: Math.round(downPaymentAmount + calc.totalPayable),
+      totalContractValue: toSatang(downPaymentAmount + calc.totalPayable),
     }
   }
 
@@ -375,8 +378,13 @@ export function EditContractPage() {
       penalty: selectedTemplate!.penalty,
       sections: normalizeSections(selectedTemplate!.sections),
       commission: selectedTemplate!.commission,
+      installmentRounding: selectedTemplate!.installmentRounding,
     }
     contract.financing = financing
+    // Terms or the first payment date may have changed: rebuild the
+    // (still pre-activation) schedule from them.
+    contract.firstPaymentDate = templateValues.firstPaymentDate
+    contract.schedule = buildPlannedSchedule(financing, templateValues.firstPaymentDate, contract.createdAt)
 
     // Draft/Rejected are the two statuses this edit actually resubmits from
     // — Pending Approval means Staff is fixing something before a Branch
@@ -519,11 +527,21 @@ export function EditContractPage() {
                     <InterestField
                       loanAmount={termsDevicePrice - Math.round(termsDevicePrice * (watchedDown ?? 0) / 100)}
                       months={watchedTerm}
+                      rounding={selectedTemplate.installmentRounding}
                     />
                   </Form.Item>
                 ) : (
                   <Form.Item name="ratePercent" hidden><InputNumber /></Form.Item>
                 )}
+                {/* The first installment's due date — the down payment is
+                    separate, paid at activation. */}
+                <Form.Item
+                  label="First Payment Date"
+                  name="firstPaymentDate"
+                  rules={[{ required: true, message: 'Required' }]}
+                >
+                  <FirstPaymentDateField />
+                </Form.Item>
               </>
             )}
 
@@ -720,6 +738,7 @@ export function EditContractPage() {
                   { label: 'Term', children: `${financing.paymentTermMonths} months` },
                   { label: 'Monthly Installment', children: <CurrencyDisplay amount={financing.installmentAmount} /> },
                   { label: 'Total Contract Value', children: <CurrencyDisplay amount={financing.totalContractValue} /> },
+                  { label: 'First Payment Date', children: dayjs(templateValues!.firstPaymentDate).format('D MMM YYYY') },
                 ]}
               />
 

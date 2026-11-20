@@ -2,8 +2,10 @@ import dayjs from 'dayjs'
 import type { ContractDocumentData } from '../components/ContractDocument'
 import type { BankAccountProfile, Merchant } from '../types/merchant'
 import type { Branch } from '../types/branch'
+import type { InstallmentRounding } from '../types/contractTemplate'
 import type { Contract } from '../types/contract'
 import { calcFixRate } from './calculator'
+import { defaultFirstPaymentDate, installmentDueDates } from './contract'
 import { getWorkspaceAvatarUrl } from './avatar'
 import { normalizeSections } from '../constants/contractSections'
 import { customerName } from './customer'
@@ -58,6 +60,7 @@ interface SampleInput {
   content: ContractDocumentData['content']
   termMonths: number
   ratePercent: number
+  rounding?: InstallmentRounding
 }
 
 export function buildSampleContractDocument({
@@ -66,10 +69,11 @@ export function buildSampleContractDocument({
   content,
   termMonths,
   ratePercent,
+  rounding,
 }: SampleInput): ContractDocumentData {
   const downPayment = Math.round(SAMPLE.devicePrice * SAMPLE.downPaymentPercent / 100)
   const loanAmount = SAMPLE.devicePrice - downPayment
-  const calc = calcFixRate(loanAmount, ratePercent, termMonths)
+  const calc = calcFixRate(loanAmount, ratePercent, termMonths, rounding)
   const createdAt = dayjs().format('D MMM YYYY')
 
 
@@ -81,11 +85,13 @@ export function buildSampleContractDocument({
       dueDate: createdAt,
       status: 'ชำระแล้ว',
     },
-    ...Array.from({ length: termMonths }, (_, i) => ({
+    // Installments from the default first payment date (the 1st of next
+    // month), the same as a real contract created today.
+    ...installmentDueDates(defaultFirstPaymentDate(), termMonths).map((due, i) => ({
       period: String(i + 2),
       amount: calc.monthlyInstallment,
       label: `งวดผ่อนเดือนที่ ${i + 1}`,
-      dueDate: dayjs().add(i + 1, 'month').format('D MMM YYYY'),
+      dueDate: dayjs(due).format('D MMM YYYY'),
       status: i === 0 ? 'ถึงกำหนด' : 'รอชำระ',
     })),
   ]

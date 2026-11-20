@@ -5,7 +5,7 @@ import { CONTRACT_DESK_WIDTH, ContractDocument, type SectionIndicator } from '..
 import { FitToWidth } from '../../../../components/FitToWidth'
 import { buildSampleContractDocument } from '../../../../utils/contractDocument'
 import { normalizeSections } from '../../../../constants/contractSections'
-import type { CommissionRule, ContractSection } from '../../../../types/contractTemplate'
+import type { CommissionRule, ContractSection, InstallmentRounding } from '../../../../types/contractTemplate'
 
 export interface PreviewValues {
   title?: string
@@ -14,6 +14,7 @@ export interface PreviewValues {
   type?: 'fixed_rate' | 'free_rate'
   fixedRateTerms?: { months: number; ratePercent: number }[]
   maxLoanAmount?: number
+  installmentRounding?: InstallmentRounding
   // The table's row-level Preview passes a full ContractTemplate (nested
   // `penalty.legalText`); the editor passes flat form values
   // (`penaltyLegalText`) — supporting both shapes here avoids needing two
@@ -67,6 +68,7 @@ export function ContractTemplatePreview({ values, merchantId, indicator }: Props
     branch,
     termMonths: term.months,
     ratePercent: term.ratePercent,
+    rounding: values.installmentRounding,
     content: {
       title: values.title || 'Untitled Template',
       bindingStatement: values.bindingStatement ?? '',

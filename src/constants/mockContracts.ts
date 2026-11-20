@@ -1,13 +1,14 @@
 import dayjs from 'dayjs'
 import type { Contract, ContractStatus, ScheduleItem, ContractPaymentRecord, DeviceSnapshot, CustomerSnapshot, TemplateSnapshot } from '../types/contract'
-import type { ContractTemplate } from '../types/contractTemplate'
-import { calcFixRate } from '../utils/calculator'
+import type { ContractTemplate, InstallmentRounding } from '../types/contractTemplate'
+import { calcFixRate, toSatang } from '../utils/calculator'
 import { MERCHANT_ID } from './mockUsers'
 import { MOCK_PRODUCTS } from './mockProducts'
 import { MOCK_PRODUCT_UNITS, unitIdFor } from './mockProductUnits'
 import { MOCK_CUSTOMERS } from './mockCustomers'
 import { MOCK_CONTRACT_TEMPLATES } from './mockContractTemplates'
 import { sampleSignedContract } from './sampleSignedCopy'
+import { buildPlannedSchedule, defaultFirstPaymentDate } from '../utils/contract'
 import { normalizeSections } from './contractSections'
 import { contractConditionOf } from '../utils/product'
 
@@ -56,6 +57,7 @@ function templateSnapshotFor(template: ContractTemplate): TemplateSnapshot {
     penalty: template.penalty,
     sections: normalizeSections(template.sections),
     commission: template.commission,
+    installmentRounding: template.installmentRounding,
   }
 }
 
@@ -71,10 +73,11 @@ function buildScheduleAndPayments(
   monthsSinceStart: number,
   paidCount: number,
   overdueCount: number,
+  rounding?: InstallmentRounding,
 ) {
   const downPaymentAmount = Math.round(devicePrice * downPaymentPercent / 100)
   const loanAmount = devicePrice - downPaymentAmount
-  const calc = calcFixRate(loanAmount, ratePercent, termMonths)
+  const calc = calcFixRate(loanAmount, ratePercent, termMonths, rounding)
   const startDate = dayjs().subtract(monthsSinceStart, 'month')
 
   const schedule: ScheduleItem[] = [
@@ -130,7 +133,7 @@ function buildScheduleAndPayments(
     ratePercent,
     paymentTermMonths: termMonths,
     installmentAmount: calc.monthlyInstallment,
-    totalContractValue: Math.round(downPaymentAmount + calc.totalPayable),
+    totalContractValue: toSatang(downPaymentAmount + calc.totalPayable),
   }
 
   return { financing, schedule, payments }
@@ -203,14 +206,19 @@ export const MOCK_CONTRACTS: Contract[] = SEEDS.map(seed => {
     seed.monthsSinceStart,
     seed.paidCount,
     seed.overdueCount,
+    seed.template.installmentRounding,
   )
   // Draft/pending/under-review/rejected/approved contracts haven't reached
-  // activation yet — no schedule/payments exist for them per the doc
-  // ("Payment schedule — generated at activation").
+  // activation yet — their schedule is the planned one built at creation
+  // (every row Upcoming, first installment on the default first payment
+  // date), with no payments.
   const preActivation: ContractStatus[] = ['draft', 'pending_approval', 'under_review', 'rejected', 'approved', 'awaiting_signature', 'pending_payment']
   const isPreActivation = preActivation.includes(seed.status)
 
   const createdAt = dayjs().subtract(seed.monthsSinceStart, 'month').toISOString()
+  // Pre-activation demos default from today, not their (older) creation
+  // date, so a first payment date never sits in the past before go-live.
+  const firstPaymentDate = isPreActivation ? defaultFirstPaymentDate() : schedule[1].dueDate
 
   return {
     id: seed.id,
@@ -225,7 +233,8 @@ export const MOCK_CONTRACTS: Contract[] = SEEDS.map(seed => {
     customer: customerSnapshotFor(seed.customerId),
     template: templateSnapshotFor(seed.template),
     financing,
-    schedule: isPreActivation ? [] : schedule,
+    firstPaymentDate,
+    schedule: isPreActivation ? buildPlannedSchedule(financing, firstPaymentDate, createdAt) : schedule,
     payments: isPreActivation ? [] : payments,
     collectionFees: [],
     penaltyAdjustments: [],

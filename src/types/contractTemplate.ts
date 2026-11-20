@@ -6,6 +6,11 @@
 export type ContractTemplateType = 'fixed_rate' | 'free_rate'
 export type ContractTemplateStatus = 'draft' | 'active' | 'archived'
 
+// How each installment amount is rounded (see roundInstallment). Rounding
+// up can only add to what the customer pays, so the total contract value
+// (and a Free Rate profit) is always worked out from the rounded amount.
+export type InstallmentRounding = 'two_decimals' | 'whole' | 'nearest_10' | 'nearest_100'
+
 export interface FixedRateTerm {
   months: number
   ratePercent: number
@@ -75,6 +80,9 @@ export interface ContractTemplate {
   maxPaymentAmount?: number
   // Fixed Rate only — the available payment terms and each one's rate.
   fixedRateTerms?: FixedRateTerm[]
+  // Absent on templates saved before the option existed — read as
+  // 'two_decimals', the default (see roundingOf).
+  installmentRounding?: InstallmentRounding
   // Printed-contract content — shown as-is (title), or before the relevant
   // section (binding statement before product/financial details, legal
   // declarations before the installment schedule).

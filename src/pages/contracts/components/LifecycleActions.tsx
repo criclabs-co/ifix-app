@@ -117,7 +117,7 @@ export function LifecycleActions({ contract, actor, onChanged }: Props) {
   }
 
   function handleRecordPayment(values: { amount: number; method: ContractPaymentRecord['method']; slipPhotos: string[]; unboxingPhotos?: UnboxingPhotos }) {
-    const { schedule, payments } = buildActivationSchedule(contract.financing, actor.id)
+    const { schedule, payments } = buildActivationSchedule(contract, actor.id)
     // The doc's activation trigger is recording the down payment — the
     // amount/method entered here become that first payment row instead of
     // buildActivationSchedule's own default, so a partial or different-

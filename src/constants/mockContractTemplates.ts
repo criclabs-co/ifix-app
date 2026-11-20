@@ -19,6 +19,9 @@ export const MOCK_CONTRACT_TEMPLATES: ContractTemplate[] = [
     minDownPaymentPercent: 10,
     maxDownPaymentPercent: 50,
     maxLoanAmount: 100000,
+    // Whole-baht installments — the other demo templates keep the default
+    // (2 decimal places), so both show up in the app.
+    installmentRounding: 'whole',
     fixedRateTerms: [
       { months: 3, ratePercent: 1.25 },
       { months: 6, ratePercent: 1.5 },

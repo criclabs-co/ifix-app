@@ -6,7 +6,7 @@ import { useCurrentUser } from '../../contexts/AuthContext'
 import { MOCK_CONTRACTS } from '../../constants/mockContracts'
 import { canCloseContract, canEditContractFields, canManageContract, canViewContracts, homePath, scopedContractList } from '../../constants/roles'
 import { confirmCloseContract } from './components/confirmCloseContract'
-import { recalculateSchedule } from '../../utils/contract'
+import { isActivated, recalculateSchedule } from '../../utils/contract'
 import { OverviewTab } from './detail/OverviewTab'
 import { CustomerTab } from './detail/CustomerTab'
 import { ScheduleTab } from './detail/ScheduleTab'
@@ -78,8 +78,10 @@ export function ContractDetailPage() {
     setVersion(v => v + 1)
   }
 
-  const hasSchedule = contract.schedule.some(s => s.period > 0)
-  const missingPhotos = missingPhotoSets(contract, hasSchedule)
+  // The schedule exists from creation; activation (the down payment) is
+  // what makes it live — and what the unboxing photos and penalties follow.
+  const activated = isActivated(contract)
+  const missingPhotos = missingPhotoSets(contract, activated)
   const canAddPhotos = canManage && contract.status !== 'closed'
 
   const confirmClose = () => confirmCloseContract(app, contract!, actor, refresh)
@@ -171,9 +173,9 @@ export function ContractDetailPage() {
           {
             key: 'photos',
             label: 'Device Photos',
-            children: <DevicePhotosTab contract={contract} actor={actor} canAdd={canAddPhotos} activated={hasSchedule} onChanged={refresh} />,
+            children: <DevicePhotosTab contract={contract} actor={actor} canAdd={canAddPhotos} activated={activated} onChanged={refresh} />,
           },
-          ...(hasSchedule ? [{
+          ...(activated ? [{
             key: 'penalty',
             label: 'Penalty & Fees',
             children: <PenaltyTab contract={contract} actor={actor} onChanged={refresh} />,

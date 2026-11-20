@@ -1,4 +1,5 @@
 import type { ScheduleResult } from '../types/installment'
+import type { InstallmentRounding } from '../types/contractTemplate'
 import dayjs from 'dayjs'
 
 function buildSchedule(monthlyInstallment: number, periods: number) {
@@ -9,18 +10,47 @@ function buildSchedule(monthlyInstallment: number, periods: number) {
   }))
 }
 
+// Money is kept to the satang (2 decimal places) everywhere.
+export const toSatang = (amount: number) => Math.round(amount * 100) / 100
+
+// One installment, rounded the way the contract template says. The other
+// three options round up, so they never undercharge.
+//   two_decimals  2,854.365 → 2,854.36
+//   whole         2,854.36  → 2,855
+//   nearest_10    2,854.36  → 2,860
+//   nearest_100   2,834.55  → 2,900
+export function roundInstallment(amount: number, rounding: InstallmentRounding = 'two_decimals'): number {
+  // Keep 2 decimal places drops anything past the satang (per the ticket's
+  // 2,854.365 → 2,854.36). The tiny nudge absorbs float noise, so 2854.36
+  // stored as 2854.35999… still reads as 2854.36.
+  if (rounding === 'two_decimals') return Math.floor(amount * 100 + 1e-6) / 100
+  // Strip float noise before rounding up (2854.3600000001 must not become 2855).
+  const exact = toSatang(amount)
+  switch (rounding) {
+    case 'whole': return Math.ceil(exact)
+    case 'nearest_10': return Math.ceil(exact / 10) * 10
+    default: return Math.ceil(exact / 100) * 100
+  }
+}
+
 /**
  * Fix Rate Mode: flat rate interest on principal
  * Total interest = principal × flatRatePercent% × periods
+ *
+ * The installment is rounded per the template, and the totals come from the
+ * rounded installment — what the customer actually pays — so rounding up
+ * shows in the total payable and the interest (a Free Rate profit).
  */
 export function calcFixRate(
   principal: number,
   flatRatePercent: number,
   periods: number,
+  rounding: InstallmentRounding = 'two_decimals',
 ): ScheduleResult {
-  const totalInterest = (principal * (flatRatePercent / 100) * periods)
-  const totalPayable = principal + totalInterest
-  const monthlyInstallment = Math.ceil(totalPayable / periods)
+  const exactInterest = principal * (flatRatePercent / 100) * periods
+  const monthlyInstallment = roundInstallment((principal + exactInterest) / periods, rounding)
+  const totalPayable = toSatang(monthlyInstallment * periods)
+  const totalInterest = toSatang(totalPayable - principal)
 
   return {
     monthlyInstallment,

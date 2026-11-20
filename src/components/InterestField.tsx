@@ -2,6 +2,8 @@ import { useEffect, useState } from 'react'
 import { Segmented, Typography, theme } from 'antd'
 import { InputNumber } from './AppInputNumber'
 import { useIsMobile } from './useIsMobile'
+import { calcFixRate } from '../utils/calculator'
+import type { InstallmentRounding } from '../types/contractTemplate'
 
 interface Props {
   // The monthly rate, %, supplied by Form.Item or passed directly (Price
@@ -13,6 +15,9 @@ interface Props {
   // the chosen term.
   loanAmount: number
   months?: number
+  // The template's installment rounding — the profit shown is what the
+  // rounded installments actually earn.
+  rounding?: InstallmentRounding
 }
 
 type Mode = 'rate' | 'profit'
@@ -28,7 +33,7 @@ const baht = new Intl.NumberFormat('th-TH', { style: 'currency', currency: 'THB'
 // months). Either way the other figure shows underneath. In profit mode the
 // profit is what's held: change the down payment or the term and the rate
 // follows. Shared by the contract's Template & Terms step and Price Check.
-export function InterestField({ value, onChange, loanAmount, months }: Props) {
+export function InterestField({ value, onChange, loanAmount, months, rounding }: Props) {
   const { token } = theme.useToken()
   const isMobile = useIsMobile()
   const [mode, setMode] = useState<Mode>('rate')
@@ -36,7 +41,9 @@ export function InterestField({ value, onChange, loanAmount, months }: Props) {
 
   const canConvert = loanAmount > 0 && !!months
   const rateFor = (p: number) => Math.round(p / (loanAmount * months!) * 100 * 100) / 100
-  const profitFor = (rate: number) => Math.round(loanAmount * rate / 100 * months!)
+  // What the installments actually earn over the term, once each one is
+  // rounded per the template (rounding up adds to the profit).
+  const profitFor = (rate: number) => calcFixRate(loanAmount, rate, months!, rounding).totalInterest
 
   // Profit mode holds the profit: when the loan or term moves, the rate
   // that earns it moves with them.
@@ -98,7 +105,7 @@ export function InterestField({ value, onChange, loanAmount, months }: Props) {
       {value != null && canConvert && (
         <Typography.Text type="secondary" style={{ display: 'block', marginTop: 4, fontSize: token.fontSizeSM }}>
           {mode === 'rate'
-            ? `${baht.format(profitFor(value))} profit over ${months} months`
+            ? `${baht.format(profitFor(value))} profit over ${months} months${rounding && rounding !== 'two_decimals' ? ', after rounding' : ''}`
             : `${value}% per month — ${baht.format(profitFor(value))} after rounding`}
         </Typography.Text>
       )}

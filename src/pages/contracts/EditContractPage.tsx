@@ -14,6 +14,9 @@ import { DownPaymentField } from '../../components/DownPaymentField'
 import { InterestField } from '../../components/InterestField'
 import { clampDown, preferredTermOf } from '../../utils/quote'
 import { PhotoUpload } from '../../components/PhotoUpload'
+import { BoxPhotosInput } from './components/BoxPhotosInput'
+import { PhotoReminder } from './components/PhotoReminder'
+import { hasAnyBoxPhoto } from '../../constants/unboxingPhotos'
 import { HeaderSteps } from '../../components/HeaderSteps'
 import { useIsMobile } from '../../components/useIsMobile'
 import { useCurrentUser } from '../../contexts/AuthContext'
@@ -31,7 +34,7 @@ import { canEditContractFields, isMerchantAdminOrAbove, scopedContractList } fro
 import { BoxLabelNote } from './components/BoxLabelNote'
 import { SelectDevice, type DeviceChoice, type DeviceSource } from './components/SelectDevice'
 import type { Customer } from '../../types/customer'
-import type { Contract } from '../../types/contract'
+import type { DevicePhotos, Contract } from '../../types/contract'
 import { PageEmptyState } from '../../components/PageEmptyState'
 import { normalizeSections } from '../../constants/contractSections'
 import { customerName } from '../../utils/customer'
@@ -49,10 +52,9 @@ interface DeviceInfoValues {
   imei1?: string
   imei2?: string
   serialNumber: string
-  frontPhoto?: string[]
-  backPhoto?: string[]
-  imeiLabelPhoto?: string[]
-  sealWrapPhoto?: string[]
+  // Optional (preferred, never blocking) — a missing set is flagged with a
+  // reminder on the Preview step and on the contract instead.
+  boxPhotos?: DevicePhotos
 }
 interface CustomerValues {
   nationalId: string
@@ -156,10 +158,7 @@ export function EditContractPage() {
     imei1: contract.device.imei1,
     imei2: contract.device.imei2,
     serialNumber: contract.device.serialNumber,
-    frontPhoto: contract.devicePhotos.front ? [contract.devicePhotos.front] : [],
-    backPhoto: contract.devicePhotos.back ? [contract.devicePhotos.back] : [],
-    imeiLabelPhoto: contract.devicePhotos.imeiLabel ? [contract.devicePhotos.imeiLabel] : [],
-    sealWrapPhoto: contract.devicePhotos.sealWrap ? [contract.devicePhotos.sealWrap] : [],
+    boxPhotos: contract.devicePhotos,
   })
   const [customerValues, setCustomerValues] = useState<CustomerValues | null>({
     nationalId: contract.customer.nationalId,
@@ -349,12 +348,7 @@ export function EditContractPage() {
       imei2: deviceInfo.imei2 || undefined,
       serialNumber: deviceInfo.serialNumber,
     }
-    contract.devicePhotos = {
-      front: deviceInfo.frontPhoto?.[0],
-      back: deviceInfo.backPhoto?.[0],
-      imeiLabel: deviceInfo.imeiLabelPhoto?.[0],
-      sealWrap: deviceInfo.sealWrapPhoto?.[0],
-    }
+    contract.devicePhotos = { ...deviceInfo.boxPhotos }
     contract.idCardPhotos = {
       idCard: customerValues.idCardPhoto?.[0],
       idCardWithOwner: customerValues.idCardWithOwnerPhoto?.[0],
@@ -594,31 +588,11 @@ export function EditContractPage() {
                 </Form.Item>
               </Col>
             </Row>
-            <Row gutter={16}>
-              <Col span={6}>
-                <Form.Item label="Box Front" name="frontPhoto" rules={[{ required: true, message: 'Required' }]}>
-                  <PhotoUpload maxCount={1} />
-                </Form.Item>
-              </Col>
-              <Col span={6}>
-                <Form.Item label="Box Back" name="backPhoto">
-                  <PhotoUpload maxCount={1} />
-                </Form.Item>
-              </Col>
-              <Col span={6}>
-                {/* Required only when the unit has an IMEI, the same rule as
-                    IMEI 1 above: a Wi-Fi-only device has no IMEI label to
-                    photograph. */}
-                <Form.Item label="IMEI Label" name="imeiLabelPhoto" rules={unit.imei1 ? [{ required: true, message: 'Required' }] : []}>
-                  <PhotoUpload maxCount={1} />
-                </Form.Item>
-              </Col>
-              <Col span={6}>
-                <Form.Item label="Seal / Wrap" name="sealWrapPhoto">
-                  <PhotoUpload maxCount={1} />
-                </Form.Item>
-              </Col>
-            </Row>
+            {/* Box photos are optional (preferred, never blocking) — the same
+                guided slots as unboxing photos at activation. */}
+            <Form.Item label="Box Photos" name="boxPhotos">
+              <BoxPhotosInput imei={unit.imei1} />
+            </Form.Item>
             <Space className="ifix-wizard-actions">
               <Button onClick={() => setStep(1)}>Back</Button>
               <Button type="primary" onClick={handleDeviceInfoNext}>Next: Customer</Button>
@@ -719,6 +693,11 @@ export function EditContractPage() {
 
           return (
             <div>
+              {!hasAnyBoxPhoto(deviceInfo.boxPhotos) && (
+                <div style={{ marginBottom: 24 }}>
+                  <PhotoReminder box unboxing={false} onUpload={() => setStep(2)} />
+                </div>
+              )}
               <Typography.Title level={5}>Device</Typography.Title>
               <DetailDescriptions style={{ marginBottom: 24 }}
                 items={[

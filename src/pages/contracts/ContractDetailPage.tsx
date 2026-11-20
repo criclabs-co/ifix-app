@@ -14,6 +14,8 @@ import { PaymentHistoryTab } from './detail/PaymentHistoryTab'
 import { PenaltyTab } from './detail/PenaltyTab'
 import { ContractPreviewTab } from './detail/ContractPreviewTab'
 import { DevicePhotosTab } from './detail/DevicePhotosTab'
+import { PhotoReminder } from './components/PhotoReminder'
+import { missingPhotoSets } from '../../constants/unboxingPhotos'
 import { LifecycleActions } from './components/LifecycleActions'
 import { PageEmptyState } from '../../components/PageEmptyState'
 import { MobileActionBar } from '../../components/MobileActionBar'
@@ -27,6 +29,7 @@ export function ContractDetailPage() {
   const [version, setVersion] = useState(0)
   const isMobile = useIsMobile()
   const app = App.useApp()
+  const [tab, setTab] = useState('customer')
   void version // trigger re-render after mutating the mock record in place
 
   if (!canViewContracts(actor)) {
@@ -76,6 +79,8 @@ export function ContractDetailPage() {
   }
 
   const hasSchedule = contract.schedule.some(s => s.period > 0)
+  const missingPhotos = missingPhotoSets(contract, hasSchedule)
+  const canAddPhotos = canManage && contract.status !== 'closed'
 
   const confirmClose = () => confirmCloseContract(app, contract!, actor, refresh)
 
@@ -110,6 +115,13 @@ export function ContractDetailPage() {
     <div>
       <OverviewTab
         contract={contract}
+        notice={(missingPhotos.box || missingPhotos.unboxing) && (
+          <PhotoReminder
+            box={missingPhotos.box}
+            unboxing={missingPhotos.unboxing}
+            onUpload={canAddPhotos ? () => setTab('photos') : undefined}
+          />
+        )}
         // On mobile the actions move to the bar at the bottom (below).
         actions={isMobile ? null : (
           <Space size={8}>
@@ -136,6 +148,8 @@ export function ContractDetailPage() {
           concern. Overview stays outside the tabs, same as every other
           detail page's header section. */}
       <Tabs
+        activeKey={tab}
+        onChange={setTab}
         items={[
           {
             key: 'customer',
@@ -157,7 +171,7 @@ export function ContractDetailPage() {
           {
             key: 'photos',
             label: 'Device Photos',
-            children: <DevicePhotosTab contract={contract} actor={actor} canAdd={canManage && contract.status !== 'closed'} activated={hasSchedule} onChanged={refresh} />,
+            children: <DevicePhotosTab contract={contract} actor={actor} canAdd={canAddPhotos} activated={hasSchedule} onChanged={refresh} />,
           },
           ...(hasSchedule ? [{
             key: 'penalty',

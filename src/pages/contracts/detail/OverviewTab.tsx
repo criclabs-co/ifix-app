@@ -10,11 +10,13 @@ import { DetailHeader } from '../../../components/DetailHeader'
 interface Props {
   contract: Contract
   actions: ReactNode
+  // A callout under the details (e.g. the missing-photos reminder).
+  notice?: ReactNode
 }
 
 // The contract number stands in for a "name" in the header. On mobile the
 // actions move to the page's bottom bar (see ContractDetailPage).
-export function OverviewTab({ contract, actions }: Props) {
+export function OverviewTab({ contract, actions, notice }: Props) {
   const { token } = theme.useToken()
   const navigate = useNavigate()
   const { device, financing, template } = contract
@@ -62,6 +64,8 @@ export function OverviewTab({ contract, actions }: Props) {
           <Typography.Text style={{ color: token.colorError }}>{contract.rejectionNote}</Typography.Text>
         </div>
       )}
+
+      {notice && <div style={{ marginTop: 16 }}>{notice}</div>}
     </div>
   )
 }

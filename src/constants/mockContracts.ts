@@ -158,6 +158,9 @@ interface Seed {
   rejectedBy?: string
   rejectionNote?: string
   signedContractUploaded?: boolean
+  // Leaves the box photos empty — so the contract shows the missing-photos
+  // reminder (box photos are optional; see missingPhotoSets).
+  noBoxPhotos?: boolean
 }
 
 // Contract numbers follow the demo merchant's own contractFormat/
@@ -176,10 +179,10 @@ const SEEDS: Seed[] = [
   { id: 'contract-003', contractNumber: seedContractNumber(0, 3), status: 'under_review', branch: 'Bangkok HQ', unitId: unitIdFor('IP17PM-512-SIL', 'Bangkok HQ'), customerId: 'cust-005', template: tmplFixed2, downPaymentPercent: 20, termMonths: 12, createdBy: 'staff-2', monthsSinceStart: 0, paidCount: 0, overdueCount: 0, submittedBy: 'staff-2' },
   { id: 'contract-004', contractNumber: seedContractNumber(1, 4), status: 'rejected', branch: 'Khon Kaen', unitId: unitIdFor('IP17-256-BLA', 'Khon Kaen'), customerId: 'cust-004', template: tmplFixed1, downPaymentPercent: 15, termMonths: 12, createdBy: 'staff-1', monthsSinceStart: 1, paidCount: 0, overdueCount: 0, submittedBy: 'staff-1', rejectedBy: 'admin-1', rejectionNote: 'ID card photo is blurry — please re-upload a clearer copy.' },
   { id: 'contract-005', contractNumber: seedContractNumber(0, 4), status: 'approved', branch: 'Phuket', unitId: unitIdFor('GAS25U-256-TBL', 'Phuket'), customerId: 'cust-003', template: tmplFixed1, downPaymentPercent: 25, termMonths: 12, createdBy: 'branch-2', monthsSinceStart: 0, paidCount: 0, overdueCount: 0, approvedBy: 'branch-2' },
-  { id: 'contract-006', contractNumber: seedContractNumber(0, 5), status: 'awaiting_signature', branch: 'Bangkok HQ', unitId: unitIdFor('GAS25P-256-NAV', 'Bangkok HQ'), customerId: 'cust-001', template: tmplFixed1, downPaymentPercent: 15, termMonths: 6, createdBy: 'staff-2', monthsSinceStart: 0, paidCount: 0, overdueCount: 0, submittedBy: 'staff-2', approvedBy: 'admin-1' },
+  { id: 'contract-006', contractNumber: seedContractNumber(0, 5), status: 'awaiting_signature', branch: 'Bangkok HQ', unitId: unitIdFor('GAS25P-256-NAV', 'Bangkok HQ'), customerId: 'cust-001', template: tmplFixed1, downPaymentPercent: 15, termMonths: 6, createdBy: 'staff-2', monthsSinceStart: 0, paidCount: 0, overdueCount: 0, submittedBy: 'staff-2', approvedBy: 'admin-1', noBoxPhotos: true },
   { id: 'contract-007', contractNumber: seedContractNumber(1, 5), status: 'pending_payment', branch: 'Chiang Mai', unitId: unitIdFor('IP17P-512-DBL', 'Chiang Mai'), customerId: 'cust-002', template: tmplFixed2, downPaymentPercent: 20, termMonths: 12, createdBy: 'branch-1', monthsSinceStart: 1, paidCount: 0, overdueCount: 0, approvedBy: 'branch-1', signedContractUploaded: true },
   { id: 'contract-008', contractNumber: seedContractNumber(3, 2), status: 'active', branch: 'Chiang Mai', unitId: unitIdFor('IP17-256-LAV', 'Chiang Mai'), customerId: 'cust-006', template: tmplFixed1, downPaymentPercent: 20, termMonths: 12, createdBy: 'branch-1', monthsSinceStart: 3, paidCount: 3, overdueCount: 0, approvedBy: 'branch-1', signedContractUploaded: true },
-  { id: 'contract-009', contractNumber: seedContractNumber(3, 3), status: 'overdue', branch: 'Bangkok HQ', unitId: unitIdFor('GAS25-128-ICY', 'Bangkok HQ'), customerId: 'cust-005', template: tmplFixed1, downPaymentPercent: 10, termMonths: 6, createdBy: 'staff-2', monthsSinceStart: 3, paidCount: 1, overdueCount: 2, submittedBy: 'staff-2', approvedBy: 'admin-1', signedContractUploaded: true },
+  { id: 'contract-009', contractNumber: seedContractNumber(3, 3), status: 'overdue', branch: 'Bangkok HQ', unitId: unitIdFor('GAS25-128-ICY', 'Bangkok HQ'), customerId: 'cust-005', template: tmplFixed1, downPaymentPercent: 10, termMonths: 6, createdBy: 'staff-2', monthsSinceStart: 3, paidCount: 1, overdueCount: 2, submittedBy: 'staff-2', approvedBy: 'admin-1', signedContractUploaded: true, noBoxPhotos: true },
   // A Staff submission in a branch that has a Branch Manager — so editing
   // before approval can be tried by its creator (Ploy), another Staff in
   // the branch (Bank) and the Branch Manager (Malee), not only Admin/Owner.
@@ -216,7 +219,7 @@ export const MOCK_CONTRACTS: Contract[] = SEEDS.map(seed => {
     merchantId: MERCHANT_ID,
     branch: seed.branch,
     device,
-    devicePhotos: { front: product.photos?.[0], imeiLabel: product.photos?.[0] },
+    devicePhotos: seed.noBoxPhotos ? {} : { front: product.photos?.[0], imeiLabel: product.photos?.[0] },
     idCardPhotos: {},
     customerId: seed.customerId,
     customer: customerSnapshotFor(seed.customerId),

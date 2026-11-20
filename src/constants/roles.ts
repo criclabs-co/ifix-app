@@ -106,18 +106,14 @@ export function canManageContract(actor: AuthUser, contract: Contract): boolean 
 }
 
 // Field-level editing (device/customer/template/pricing, not just moving
-// the contract through its lifecycle) is narrower than canManageContract
-// above — per the doc's Contract Status Matrix, only the contract's own
-// creator can edit it, and only in the three statuses the doc marks
-// editable: Draft ("✅ Creator"), Pending Approval ("✅ Staff" — the
-// submitter, before a Branch Manager starts review), and Rejected
-// ("✅ Staff (edit and resubmit)"). Every other status is either locked
-// (Under Review) or has no documented field-editing capability at all —
-// a Branch Manager approving a Staff submission still can't rewrite its
-// device/customer/pricing, only move its status.
+// the contract through its lifecycle) — open to every role that can manage
+// the contract (Staff and Branch Manager in their own branch, Merchant
+// Admin/Owner across the merchant), not just its creator, as long as it
+// hasn't reached a reviewer's hands: Draft, Pending Approval, and Rejected
+// (edit and resubmit). Under Review is locked while a manager reviews it,
+// and from Approved on the terms are final.
 export function canEditContractFields(actor: AuthUser, contract: Contract): boolean {
   if (!canManageContract(actor, contract)) return false
-  if (contract.createdBy !== actor.id) return false
   return contract.status === 'draft' || contract.status === 'pending_approval' || contract.status === 'rejected'
 }
 

@@ -58,10 +58,10 @@ export function ContractDetailPage() {
   const canManage = canManageContract(actor, contract)
   const canEditFields = canEditContractFields(actor, contract)
   const canClose = canCloseContract(actor, contract)
-  // The creator could edit up to the moment a manager started review —
-  // show Edit as locked rather than having it simply vanish, so they know
-  // why they can't change anything now.
-  const editLockedForReview = contract.status === 'under_review' && contract.createdBy === actor.id && canManage
+  // Anyone who could edit up to the moment a manager started review sees
+  // Edit as locked rather than having it simply vanish, so they know why
+  // they can't change anything now.
+  const editLockedForReview = contract.status === 'under_review' && canManage
 
   // Defensive, idempotent recompute on every view (a no-op before
   // activation — see the function's own guard) — this is what makes an

@@ -26,7 +26,7 @@ import { activeTemplatesFor, MOCK_CONTRACT_TEMPLATES } from '../../constants/moc
 import { MOCK_CUSTOMERS, findCustomerByNationalId, generateCustomerId } from '../../constants/mockCustomers'
 import { MOCK_CONTRACTS } from '../../constants/mockContracts'
 import { calcFixRate } from '../../utils/calculator'
-import { submitContractForApproval } from '../../utils/contract'
+import { needsReview, submitContractForApproval } from '../../utils/contract'
 import { canEditContractFields, isMerchantAdminOrAbove, scopedContractList } from '../../constants/roles'
 import { BoxLabelNote } from './components/BoxLabelNote'
 import { SelectDevice, type DeviceChoice, type DeviceSource } from './components/SelectDevice'
@@ -71,7 +71,7 @@ interface CustomerValues {
 // Same 5-step wizard as CreateContractPage, prefilled from an existing
 // Draft/Pending Approval/Rejected contract instead of starting blank —
 // per the doc's Contract Status Matrix, those are the only statuses ever
-// editable, and only by the contract's own creator (canEditContractFields).
+// editable, by anyone who can manage the contract (canEditContractFields).
 // Saving mutates the existing contract in place (same id/contractNumber)
 // rather than creating a new one, then applies the same submit-for-
 // approval transition Draft/Rejected already used at creation — this is
@@ -105,7 +105,9 @@ export function EditContractPage() {
       <PageEmptyState
         icon={<Lock size={22} strokeWidth={2.25} />}
         title="You can't edit this contract"
-        description="Only the contract's own creator can edit it, and only while it's Draft, Pending Approval, or Rejected."
+        description={maybeContract.status === 'under_review'
+          ? "It's being reviewed by a manager. Editing opens again if it's rejected."
+          : "Contracts can only be edited while they're Draft, Pending Approval, or Rejected."}
         action={<Button onClick={() => navigate(`/contracts/${maybeContract.id}`)}>Back to contract</Button>}
       />
     )
@@ -392,7 +394,7 @@ export function EditContractPage() {
       contract.rejectedBy = null
       contract.rejectedAt = null
       submitContractForApproval(contract, actor.id, actor.role)
-      message.success(actor.role === 'staff' ? 'Changes saved and submitted for approval' : 'Changes saved and approved')
+      message.success(contract.status === 'pending_approval' ? 'Changes saved and submitted for approval' : 'Changes saved and approved')
     } else {
       message.success('Changes saved')
     }
@@ -411,10 +413,13 @@ export function EditContractPage() {
     { title: 'Preview', description: 'Review the full contract summary before saving.' },
   ]
 
+  // A Staff-created contract goes back to review even when a manager
+  // resubmits it (needsReview), so the button says so.
+  const goesToReview = needsReview(contract, actor.role)
   const submitLabel = originalStatus === 'rejected'
     ? 'Save & Resubmit'
     : originalStatus === 'draft'
-    ? (actor.role === 'staff' ? 'Save & Submit for Approval' : 'Save Contract')
+    ? (goesToReview ? 'Save & Submit for Approval' : 'Save Contract')
     : 'Save Changes'
 
   // Same header takeover as CreateContractPage — see its own comment for

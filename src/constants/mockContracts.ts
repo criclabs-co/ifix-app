@@ -180,6 +180,10 @@ const SEEDS: Seed[] = [
   { id: 'contract-007', contractNumber: seedContractNumber(1, 5), status: 'pending_payment', branch: 'Chiang Mai', unitId: unitIdFor('IP17P-512-DBL', 'Chiang Mai'), customerId: 'cust-002', template: tmplFixed2, downPaymentPercent: 20, termMonths: 12, createdBy: 'branch-1', monthsSinceStart: 1, paidCount: 0, overdueCount: 0, approvedBy: 'branch-1', signedContractUploaded: true },
   { id: 'contract-008', contractNumber: seedContractNumber(3, 2), status: 'active', branch: 'Chiang Mai', unitId: unitIdFor('IP17-256-LAV', 'Chiang Mai'), customerId: 'cust-006', template: tmplFixed1, downPaymentPercent: 20, termMonths: 12, createdBy: 'branch-1', monthsSinceStart: 3, paidCount: 3, overdueCount: 0, approvedBy: 'branch-1', signedContractUploaded: true },
   { id: 'contract-009', contractNumber: seedContractNumber(3, 3), status: 'overdue', branch: 'Bangkok HQ', unitId: unitIdFor('GAS25-128-ICY', 'Bangkok HQ'), customerId: 'cust-005', template: tmplFixed1, downPaymentPercent: 10, termMonths: 6, createdBy: 'staff-2', monthsSinceStart: 3, paidCount: 1, overdueCount: 2, submittedBy: 'staff-2', approvedBy: 'admin-1', signedContractUploaded: true },
+  // A Staff submission in a branch that has a Branch Manager — so editing
+  // before approval can be tried by its creator (Ploy), another Staff in
+  // the branch (Bank) and the Branch Manager (Malee), not only Admin/Owner.
+  { id: 'contract-011', contractNumber: seedContractNumber(0, 6), status: 'pending_approval', branch: 'Chiang Mai', unitId: unitIdFor('GAS25-256-NAV', 'Chiang Mai'), customerId: 'cust-002', template: tmplFixed1, downPaymentPercent: 20, termMonths: 6, createdBy: 'staff-4', monthsSinceStart: 0, paidCount: 0, overdueCount: 0, submittedBy: 'staff-4' },
   { id: 'contract-010', contractNumber: seedContractNumber(7, 1), status: 'settled', branch: 'Phuket', unitId: unitIdFor('IP17PM-256-COR', 'Phuket'), customerId: 'cust-003', template: tmplFixed2, downPaymentPercent: 30, termMonths: 6, createdBy: 'branch-2', monthsSinceStart: 7, paidCount: 6, overdueCount: 0, approvedBy: 'branch-2', signedContractUploaded: true },
 ]
 

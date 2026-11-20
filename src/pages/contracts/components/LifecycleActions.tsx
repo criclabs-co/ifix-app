@@ -162,8 +162,8 @@ export function LifecycleActions({ contract, actor, onChanged }: Props) {
   // as the last step of actually editing the contract (EditContractPage's
   // own submit button), not as a bare status-flip button here with no
   // chance to fix anything first. No action renders here for either
-  // status; ContractDetailPage's own "Edit" button (canEditContractFields,
-  // creator-only) is the sole entry point into that flow. Rejected also
+  // status; ContractDetailPage's own "Edit" button (canEditContractFields)
+  // is the sole entry point into that flow. Rejected also
   // gets Close, for a contract that won't be resubmitted at all.
   if (contract.status === 'rejected' && canCloseContract(actor, contract)) {
     return <Button icon={<CircleX size={16} strokeWidth={2.25} />} onClick={confirmClose}>Close Contract</Button>

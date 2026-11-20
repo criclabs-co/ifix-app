@@ -1,5 +1,5 @@
 import dayjs from 'dayjs'
-import type { Contract, ContractPaymentRecord, FinancingTerms, ScheduleItem, CollectionFeeRecord, PenaltyAdjustment, UnboxingPhotos } from '../types/contract'
+import type { Contract, ContractPaymentRecord, FinancingTerms, ScheduleItem, CollectionFeeRecord, PenaltyAdjustment, UnboxingPhotos, DevicePhotos } from '../types/contract'
 import type { Merchant } from '../types/merchant'
 import type { PenaltyRule } from '../types/contractTemplate'
 import { MOCK_USER_ACCOUNTS } from '../constants/mockUsers'
@@ -45,8 +45,8 @@ export function remainingDue(item: ScheduleItem): number {
   return Math.max(0, item.amount - (item.paidAmount ?? 0) - (item.creditAmount ?? 0))
 }
 
-// Merges post-unboxing photos into the contract (optional, add-only — a
-// slot that already has a photo keeps it; see DevicePhotosTab). Extras are
+// Merges post-unboxing photos into the contract at activation — a slot
+// that already has a photo keeps it. Extras are
 // capped so the total stays within MAX_UNBOXING_PHOTOS.
 export function addUnboxingPhotos(contract: Contract, photos: UnboxingPhotos, actorId: string): void {
   if (unboxingPhotoCount(photos) === 0) return
@@ -58,6 +58,20 @@ export function addUnboxingPhotos(contract: Contract, photos: UnboxingPhotos, ac
     boxContents: current.boxContents ?? photos.boxContents,
     other: [...(current.other ?? []), ...(photos.other ?? [])].slice(0, MAX_OTHER_UNBOXING_PHOTOS),
   }
+  contract.unboxingPhotosUpdatedBy = actorId
+  contract.unboxingPhotosUpdatedAt = new Date().toISOString()
+}
+
+// Box photos changed after creation (Device Photos tab) — added, replaced
+// or removed. Optional, so any slot can change while the contract is open.
+export function setBoxPhotos(contract: Contract, photos: DevicePhotos): void {
+  contract.devicePhotos = { ...photos }
+}
+
+// Unboxing photos changed from the Device Photos tab — added, replaced or
+// removed (activation uses addUnboxingPhotos above).
+export function setUnboxingPhotos(contract: Contract, photos: UnboxingPhotos, actorId: string): void {
+  contract.unboxingPhotos = { ...photos, other: photos.other?.slice(0, MAX_OTHER_UNBOXING_PHOTOS) }
   contract.unboxingPhotosUpdatedBy = actorId
   contract.unboxingPhotosUpdatedAt = new Date().toISOString()
 }

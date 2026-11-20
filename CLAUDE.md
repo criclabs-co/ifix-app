@@ -191,6 +191,14 @@ When building a new feature (a table, a form, an empty state, a detail page, etc
 - Always capture form values into React state on each "Next" click using `form.getFieldsValue()`
 - Never read from an unmounted Form instance
 
+## Screenshots
+Setup for the `ac-screenshots` skill (and any Playwright screenshot run):
+- URL: `http://localhost:5173`. Start the dev server with `preview_start` → "Vite Dev Server".
+- Sign in and hide dev chrome: add `?preview=1&as=<userId>&theme=light` to any page. Preview mode removes the prototype stage and dev tools. User ids are in `src/constants/mockUsers.ts` (`owner-1`, `admin-1`, `branch-1`, `staff-1`, …).
+- Light mode: also set localStorage `ifix-theme-variant=light` in an init script.
+- Hide: `button[aria-label="Prototype tools"]` (the floating preview-tools button). Keep `.ant-picker-dropdown`, `.ant-select-dropdown`, `.ant-drawer` and `.ant-modal`.
+- Traps: **Escape exits preview mode**, so close pickers by clicking away. Mock data is in memory and resets on a full reload, so do a ticket's flow in one browser session.
+
 ## Deployment
 - `git push` → Vercel auto-deploys from GitHub
 - If auto-deploy fails, run `vercel --prod` from the project root

@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { App, Alert, ConfigProvider, Table, Button, Dropdown, Avatar, theme } from 'antd'
+import { App, ConfigProvider, Table, Button, Dropdown, Avatar, theme } from 'antd'
 import { Pencil, Trash2, ChevronLeft, ChevronRight, MoreHorizontal, ImageOff, Printer, Smartphone, PackageOpen } from 'lucide-react'
 import type { ColumnsType } from 'antd/es/table'
 import { useCurrentUser } from '../../contexts/AuthContext'
@@ -30,6 +30,7 @@ import { useColumnPicker } from '../../components/useColumnPicker'
 import { withColumnMinWidths } from '../../components/tableColumns'
 import { useActionSheet } from '../../components/useActionSheet'
 import { rowActionMenu, type RowAction } from '../../components/rowActions'
+import { Callout } from '../../components/Callout'
 
 const priceFormatter = new Intl.NumberFormat('th-TH', { style: 'currency', currency: 'THB', minimumFractionDigits: 0 })
 
@@ -55,11 +56,10 @@ export function UnitsListPage() {
   // write action below is gated on canManageUnits separately.
   if (!canViewUnits(user)) {
     return (
-      <Alert
-        type="error"
+      <Callout
+        type="info"
         message="Not applicable"
         description="Units are scoped to a merchant workspace. Super Admin operates at the platform level."
-        showIcon
       />
     )
   }

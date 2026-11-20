@@ -1,5 +1,5 @@
 import { useEffect } from 'react'
-import { Alert, Drawer, Button, Space, Form, Input } from 'antd'
+import { Drawer, Button, Space, Form, Input } from 'antd'
 import { InputNumber } from '../../../components/AppInputNumber'
 import { Select } from '../../../components/AppSelect'
 import { PhotoUpload } from '../../../components/PhotoUpload'
@@ -9,6 +9,7 @@ import type { Product, ProductUnit, UnitGrade, UnitTax } from '../../../types/pr
 import { GRADE_LABELS, TAX_LABELS } from '../../../constants/products'
 import { BRANCHES } from '../../../constants/mockData'
 import { fullSkuName } from '../../../utils/product'
+import { Callout } from '../../../components/Callout'
 
 interface Props {
   open: boolean
@@ -96,18 +97,16 @@ export function EditUnitModal({ open, actor, product, unit, onClose, onUpdated }
     >
       <Form form={form} layout="vertical" onFinish={handleSubmit} requiredMark={false}>
         {isSold && (
-          <Alert
+          <Callout
             type="info"
-            showIcon
             message="This unit is sold"
             description="Sold units are kept as historical records and can no longer be edited."
             style={{ marginBottom: 16 }}
           />
         )}
         {isReserved && (
-          <Alert
+          <Callout
             type="info"
-            showIcon
             message="This unit is reserved"
             description="It's committed to a contract, so branch, condition, tax and price are locked. Model number, notes and condition photos can still be updated."
             style={{ marginBottom: 16 }}

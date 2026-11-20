@@ -1,5 +1,6 @@
-import { Alert, Button } from 'antd'
+import { Button } from 'antd'
 import { ImagePlus } from 'lucide-react'
+import { Callout } from '../../../components/Callout'
 
 interface Props {
   box: boolean
@@ -16,9 +17,8 @@ export function PhotoReminder({ box, unboxing, onUpload }: Props) {
   if (!box && !unboxing) return null
   const what = box && unboxing ? 'Box and unboxing photos' : box ? 'Box photos' : 'Unboxing photos'
   return (
-    <Alert
+    <Callout
       type="warning"
-      showIcon
       message={`${what} haven't been uploaded`}
       description="They're optional, but they keep a record of the device's condition. Upload them so they aren't forgotten."
       action={onUpload && (

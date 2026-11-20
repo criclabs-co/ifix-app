@@ -42,6 +42,7 @@ import { customerName } from '../../utils/customer'
 import { ID_TYPE_LABELS, idFields, readIdNumber } from '../../utils/idNumber'
 import { IdNumberField } from '../../components/IdNumberField'
 import { contractConditionOf, isSellable } from '../../utils/product'
+import { Callout } from '../../components/Callout'
 
 interface DeviceValues { branch: string; productId: string; unitId: string; source: DeviceSource }
 interface TemplateValues { templateId: string; termMonths: number; ratePercent: number; downPaymentPercent: number; firstPaymentDate: string }
@@ -189,11 +190,10 @@ export function CreateContractPage() {
 
   if (!canCreateContract(actor)) {
     return (
-      <Alert
+      <Callout
         type="info"
         message="Not applicable"
         description="Contracts are scoped to a merchant workspace. Super Admin operates at the platform level."
-        showIcon
       />
     )
   }

@@ -1,8 +1,9 @@
-import { Form, Input, Button, Alert, Typography, theme } from 'antd'
+import { Form, Input, Button, Typography, theme } from 'antd'
 import { Lock, Eye, EyeOff } from 'lucide-react'
 import { Navigate, useNavigate } from 'react-router-dom'
 import { useAuth } from '../../contexts/AuthContext'
 import { AuthLayout } from './AuthLayout'
+import { Callout } from '../../components/Callout'
 
 // Password fields' show/hide toggle as Lucide icons at 16px, matching the
 // Lock icon at the other end of the field — antd's own EyeOutlined /
@@ -37,9 +38,8 @@ export function SetPasswordPage() {
         ? 'This is your first sign-in. Set a new password to activate your account.'
         : 'Your password was reset. Set a new password to continue.'}
     >
-      <Alert
+      <Callout
         type="info"
-        showIcon
         message={`Signed in as ${pendingAccount?.name}`}
         style={{ marginBottom: 8 }}
       />

@@ -1,5 +1,6 @@
-import { Alert, Button } from 'antd'
+import { Button } from 'antd'
 import type { ProductUnit } from '../../../types/product'
+import { Callout } from '../../../components/Callout'
 
 interface Props {
   unit: ProductUnit
@@ -13,9 +14,8 @@ interface Props {
 // button — a stand-in for the label, not part of the real flow.
 export function BoxLabelNote({ unit, onFill }: Props) {
   return (
-    <Alert
+    <Callout
       type="info"
-      showIcon
       message={`Enter the serial number${unit.imei1 ? ' and IMEI' : ''} from the box label — they're checked against ${unit.serialNumber}.`}
       action={<Button size="small" onClick={onFill}>Fill demo values</Button>}
       style={{ marginBottom: 16, alignItems: 'center' }}

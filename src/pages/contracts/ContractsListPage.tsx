@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Alert } from 'antd'
+
 import { useNavigate } from 'react-router-dom'
 import { useCurrentUser } from '../../contexts/AuthContext'
 import { MOCK_CONTRACTS } from '../../constants/mockContracts'
@@ -10,6 +10,7 @@ import { ContractSearch, type ContractStatusFilter } from './components/Contract
 import { contractFilterFields } from './components/contractFilterFields'
 import { ListToolbar } from '../../components/ListToolbar'
 import { customerName } from '../../utils/customer'
+import { Callout } from '../../components/Callout'
 
 // Real Contracts list, replacing the old "coming soon" placeholder — per
 // the Contract doc's "List Contract" section: search by contract number/
@@ -27,11 +28,10 @@ export function ContractsListPage() {
 
   if (!canViewContracts(user)) {
     return (
-      <Alert
+      <Callout
         type="info"
         message="Not applicable"
         description="Contracts are scoped to a merchant workspace. Super Admin operates at the platform level."
-        showIcon
       />
     )
   }

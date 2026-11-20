@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { fullSkuName } from '../../utils/product'
-import { Alert, message } from 'antd'
+import { message } from 'antd'
 import { useCurrentUser } from '../../contexts/AuthContext'
 import { ListToolbar } from '../../components/ListToolbar'
 import { ListSearch } from '../../components/ListSearch'
@@ -13,6 +13,7 @@ import { ProductTypeTabs, type TypeFilter } from './components/ProductTypeTabs'
 import { CreateProductModal } from './components/CreateProductModal'
 import { EditProductModal } from './components/EditProductModal'
 import { CreateUnitModal } from './components/CreateUnitModal'
+import { Callout } from '../../components/Callout'
 
 export function ProductsPage() {
   const user = useCurrentUser()
@@ -25,11 +26,10 @@ export function ProductsPage() {
 
   if (!canViewProducts(user)) {
     return (
-      <Alert
+      <Callout
         type="info"
         message="Not applicable"
         description="Products are scoped to a merchant workspace. Super Admin operates at the platform level."
-        showIcon
       />
     )
   }

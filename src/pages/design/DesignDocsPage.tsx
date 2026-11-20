@@ -8,6 +8,7 @@ import { toHex } from '../../utils/colorTokenLookup'
 import { DotTag, StatusTag } from '../../components/DotTag'
 import { TONE_SOURCES, TONE_FILL_ALPHA, useTones } from '../../components/tones'
 import { STATUS_BADGE_GROUPS } from '../../constants/statusBadges'
+import { Callout } from '../../components/Callout'
 
 // Grouped nav, same shape as antd's own docs sidebar (a group label that
 // toggles collapse, non-navigable itself, over a set of real section links).
@@ -32,6 +33,8 @@ const TOC_GROUPS = [
     label: 'Components',
     items: [
       { id: 'button', label: 'Button' },
+      { id: 'callout', label: 'Callout' },
+      { id: 'alert', label: 'Alert' },
       { id: 'status-badges', label: 'Status badges' },
     ],
   },
@@ -593,6 +596,78 @@ function StatusBadgesDocs() {
   )
 }
 
+// Callout and Alert look the same — both are antd's Alert — and differ in
+// what they announce. Each section shows the four types live on the page
+// canvas, then where the app uses it, so the choice between them is made
+// on meaning rather than looks.
+function NoticeDocs({ kind }: { kind: 'callout' | 'alert' }) {
+  const { token } = theme.useToken()
+  const samples = kind === 'callout'
+    ? [
+      { type: 'info' as const, message: 'This unit is reserved', description: "It's committed to a contract, so branch, condition, tax and price are locked." },
+      { type: 'success' as const, message: 'Down payment recorded', description: 'The contract is active and the payment schedule has started.' },
+      { type: 'warning' as const, message: "Unboxing photos haven't been uploaded", description: "They're optional, but they keep a record of the device's condition." },
+      { type: 'error' as const, message: 'Rejection Note', description: 'ID card photo is blurry — please re-upload a clearer copy.' },
+    ]
+    : [
+      { type: 'success' as const, message: 'Reset link generated' },
+      { type: 'warning' as const, message: 'No unit with this IMEI', description: "Nothing in this branch's inventory has that IMEI. Check the digits against the box label." },
+      { type: 'error' as const, message: 'Incorrect email or password' },
+      { type: 'error' as const, message: 'This customer is blacklisted', description: 'Creating a contract for a blacklisted customer requires approval.' },
+    ]
+  const uses = kind === 'callout'
+    ? [
+      ['Rejection Note', 'Contract › Overview, on a rejected contract'],
+      ['This unit is sold / reserved', 'Edit Unit drawer'],
+      ['Photos haven’t been uploaded', 'Contract detail, with an Upload Photos action'],
+      ['Enter the serial number from the box label', 'Create Contract › Device Info'],
+      ['No units are available at this branch', 'Create Contract › Select Device'],
+      ['Not applicable', 'Merchant-only pages, signed in as Super Admin'],
+    ]
+    : [
+      ['Incorrect email or password', 'Sign in, after submitting'],
+      ['Reset link generated', 'Forgot password, after submitting'],
+      ['No unit with this IMEI / This unit can’t be used', 'Select Device, after typing an IMEI'],
+      ['This customer is blacklisted', 'Create and Edit Contract, once the ID matches a blacklisted customer'],
+    ]
+  return (
+    <>
+      <Typography.Text type="secondary" style={{ fontSize: 13, display: 'block', marginBottom: 16 }}>
+        {kind === 'callout'
+          ? 'A note that belongs to the page: something to know about what you’re looking at. It has role="note", so a screen reader reads it in order with the rest of the page, never on its own. Use it for anything that’s there when the page opens. <Callout> from components/Callout.tsx.'
+          : 'Feedback to something the user just did. It has role="alert", a live region: a screen reader reads it out the moment it appears, interrupting whatever it was reading. Use it only for a result that wasn’t on the page a moment ago — never for a note that shows every visit. antd’s own <Alert showIcon>.'}
+      </Typography.Text>
+      <div style={{
+        background: token.colorBgLayout,
+        borderRadius: 8,
+        padding: 24,
+        display: 'flex',
+        flexDirection: 'column',
+        gap: 12,
+        marginBottom: 16,
+      }}>
+        {/* The Alert samples are only specimens, so they're marked as notes
+            too — four live regions firing on page load would be exactly
+            the interruption this section warns against. */}
+        {samples.map(s => <Callout key={s.message} {...s} />)}
+      </div>
+      <SubHeading>Used for</SubHeading>
+      {uses.map(([what, where]) => (
+        <div key={what} style={{
+          display: 'grid',
+          gridTemplateColumns: 'minmax(0, 1fr) minmax(0, 1fr)',
+          gap: 12,
+          padding: '12px 0',
+          borderBottom: `0.5px solid ${token.colorBorderSecondary}`,
+        }}>
+          <Typography.Text style={{ fontSize: 13 }}>{what}</Typography.Text>
+          <Typography.Text type="secondary" style={{ fontSize: 13 }}>{where}</Typography.Text>
+        </div>
+      ))}
+    </>
+  )
+}
+
 function SubHeading({ children }: { children: React.ReactNode }) {
   const { token } = theme.useToken()
   return (
@@ -1015,6 +1090,14 @@ export function DesignDocsPage() {
             <ButtonStateRow danger caption="Outlined, for a destructive action that sits among other buttons (Blacklist customer)." />
             <ButtonStateRow danger primary caption="Solid, only as the confirm button of a destructive confirmation (Delete template, Blacklist)." />
             </div>
+          </Section>
+
+          <Section id="callout" title="Callout">
+            <NoticeDocs kind="callout" />
+          </Section>
+
+          <Section id="alert" title="Alert">
+            <NoticeDocs kind="alert" />
           </Section>
 
           <Section id="status-badges" title="Status badges">

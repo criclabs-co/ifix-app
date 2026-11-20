@@ -1,9 +1,10 @@
 import { useState } from 'react'
-import { Form, Input, Button, Alert } from 'antd'
+import { Form, Input, Button } from 'antd'
 import { Lock, Eye, EyeOff } from 'lucide-react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { MOCK_USER_ACCOUNTS } from '../../constants/mockUsers'
 import { AuthLayout } from './AuthLayout'
+import { Callout } from '../../components/Callout'
 
 // Password fields' show/hide toggle as Lucide icons at 16px, matching the
 // Lock icon at the other end of the field — antd's own EyeOutlined /
@@ -34,9 +35,8 @@ export function ResetPasswordPage() {
   if (!isValid) {
     return (
       <AuthLayout title="Reset link invalid">
-        <Alert
+        <Callout
           type="error"
-          showIcon
           message="This reset link is invalid or has expired"
           description="Reset links are single-use and expire after 15 minutes. Request a new one to continue."
           style={{ marginBottom: 16 }}

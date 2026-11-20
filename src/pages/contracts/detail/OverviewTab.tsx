@@ -1,11 +1,12 @@
 import type { ReactNode } from 'react'
-import { Typography, theme } from 'antd'
+import { theme } from 'antd'
 import { useNavigate } from 'react-router-dom'
 import type { Contract } from '../../../types/contract'
 import { CurrencyDisplay } from '../../../components/CurrencyDisplay'
 import { DetailDescriptions } from '../../../components/DetailDescriptions'
 import { ContractStatusTag } from '../components/ContractStatusTag'
 import { DetailHeader } from '../../../components/DetailHeader'
+import { Callout } from '../../../components/Callout'
 
 interface Props {
   contract: Contract
@@ -59,10 +60,7 @@ export function OverviewTab({ contract, actions, notice }: Props) {
       />
 
       {contract.status === 'rejected' && contract.rejectionNote && (
-        <div style={{ marginTop: 16, padding: 12, background: token.colorErrorBg, borderRadius: token.borderRadius }}>
-          <Typography.Text strong style={{ color: token.colorError, display: 'block', marginBottom: 4 }}>Rejection Note</Typography.Text>
-          <Typography.Text style={{ color: token.colorError }}>{contract.rejectionNote}</Typography.Text>
-        </div>
+        <Callout type="error" message="Rejection Note" description={contract.rejectionNote} style={{ marginTop: 16 }} />
       )}
 
       {notice && <div style={{ marginTop: 16 }}>{notice}</div>}

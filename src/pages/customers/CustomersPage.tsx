@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Alert, message } from 'antd'
+import { message } from 'antd'
 import { useCurrentUser } from '../../contexts/AuthContext'
 import { ListToolbar } from '../../components/ListToolbar'
 import { ListSearch } from '../../components/ListSearch'
@@ -11,6 +11,7 @@ import { CustomerTable } from './components/CustomerTable'
 import { CustomerModal } from './components/CustomerModal'
 import { customerName } from '../../utils/customer'
 import { normalizeIdNumber } from '../../utils/idNumber'
+import { Callout } from '../../components/Callout'
 
 // Real Customers list, replacing the "coming soon" placeholder — per the
 // Customer doc's Phase 2 "List Customer" feature (name, ID number, active
@@ -26,11 +27,10 @@ export function CustomersPage() {
 
   if (!canViewCustomers(user)) {
     return (
-      <Alert
+      <Callout
         type="info"
         message="Not applicable"
         description="Customers are scoped to a merchant workspace. Super Admin operates at the platform level."
-        showIcon
       />
     )
   }

@@ -11,6 +11,7 @@ import { scopedAllUnits, scopedProductList } from '../../../constants/roles'
 import { UNIT_NUMBER_LENGTH, codeMatching, findUnitByCode, isSellable, notForSaleReason, unitConditionLabel } from '../../../utils/product'
 import type { AuthUser } from '../../../types/installment'
 import type { Product, ProductUnit } from '../../../types/product'
+import { Callout } from '../../../components/Callout'
 
 // How the unit was picked — decides whether Fill Device Info arrives with the
 // IMEI and Serial Number already filled (IMEI Search) or asks for them to be
@@ -229,7 +230,7 @@ function GuidedBrowse({ products, isPickable, value, onChange }: {
         />
       </Form.Item>
       {inStock.length === 0 && (
-        <Alert type="warning" showIcon message="No units are available at this branch." style={{ marginBottom: 16 }} />
+        <Callout type="warning" message="No units are available at this branch." style={{ marginBottom: 16 }} />
       )}
     </>
   )

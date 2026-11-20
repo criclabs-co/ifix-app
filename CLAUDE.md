@@ -178,6 +178,10 @@ When building a new feature (a table, a form, an empty state, a detail page, etc
   - **Truly empty (no filter active)** — same icon, title "No {things} yet", description "{Things} you add will show up here."
   - See `UnitsListPage.tsx` (original) and `UserTable.tsx` for the reference implementation.
 - **Row actions** — define a table's row actions once as `RowAction[]` (`src/components/rowActions.tsx`); desktop renders them with `rowActionMenu()` in the "…" dropdown, mobile in the shared action sheet (`useActionSheet`). "…" means "this row has actions": every row with actions shows it, at every size (on mobile via `MobileTableRow`'s `onMore`); a row the viewer has no actions on shows none. Tapping a mobile row opens its detail page where it has one, or the action sheet where it doesn't. Never drop a row's actions on mobile.
+- **Callout vs. Alert** — they look the same (both are antd's `Alert`) but announce differently, so pick by meaning:
+  - **`<Callout>`** (`src/components/Callout.tsx`, `role="note"`) — a note that's part of the page and shows when it opens: a rejection note, a locked unit, missing photos, "Not applicable". A screen reader reads it in order with the rest of the page.
+  - **antd `<Alert showIcon>`** (`role="alert"`, a live region) — feedback to something the user just did: a failed sign-in, an IMEI with no match, a blacklisted customer appearing after an ID lookup. A screen reader reads it out immediately.
+  - Never hand-roll a tinted `div` for either — `colorError` text on `colorErrorBg` fails contrast. Both are documented on `/design-docs`.
 - **Detail pages** — mirror the layout of an existing detail page for the same kind of entity (e.g. a new user-facing detail view should look like `AccountGeneralPage.tsx`/`UserDetailPage.tsx`'s header + `SettingsCard` sections) rather than composing a new layout from scratch.
 - Before adding a new visual pattern, search the codebase for how a similar need was already solved (empty states, panel headers, table action columns, avatar sizing, icon color handling, etc.) and reuse it.
 

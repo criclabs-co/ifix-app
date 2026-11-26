@@ -286,7 +286,7 @@ export function CreateContractPage() {
       templateValues!.downPaymentPercent,
       templateValues!.ratePercent,
       templateValues!.termMonths,
-      selectedTemplate?.installmentRounding,
+      selectedTemplate?.paymentRounding,
     )
   }
 
@@ -389,7 +389,7 @@ export function CreateContractPage() {
         penalty: selectedTemplate!.penalty,
         sections: normalizeSections(selectedTemplate!.sections),
         commission: selectedTemplate!.commission,
-        installmentRounding: selectedTemplate!.installmentRounding,
+        paymentRounding: selectedTemplate!.paymentRounding,
       },
       financing,
       firstPaymentDate: templateValues.firstPaymentDate,
@@ -539,6 +539,7 @@ export function CreateContractPage() {
                 <Form.Item label="Down Payment" name="downPaymentPercent" rules={[{ required: true, message: 'Required' }]}>
                   <DownPaymentField
                     devicePrice={termsDevicePrice}
+                    rounding={selectedTemplate.paymentRounding}
                     min={selectedTemplate.minDownPaymentPercent}
                     max={selectedTemplate.maxDownPaymentPercent}
                   />
@@ -546,9 +547,10 @@ export function CreateContractPage() {
                 {selectedTemplate.type === 'free_rate' ? (
                   <Form.Item label="Interest" name="ratePercent" rules={[{ required: true, message: 'Required' }]}>
                     <InterestField
-                      loanAmount={termsDevicePrice - Math.round(termsDevicePrice * (watchedDown ?? 0) / 100)}
+                      devicePrice={termsDevicePrice}
+                      downPaymentPercent={watchedDown}
                       months={watchedTerm}
-                      rounding={selectedTemplate.installmentRounding}
+                      rounding={selectedTemplate.paymentRounding}
                     />
                   </Form.Item>
                 ) : (

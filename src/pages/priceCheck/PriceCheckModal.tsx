@@ -155,7 +155,7 @@ function PriceCheckContent({ actor, onDone }: { actor: AuthUser; onDone: () => v
   const monthlyFor = (price: number) => defaultTemplate && longestTerm?.ratePercent != null
     // The lowest monthly the default template reaches: its smallest down
     // payment over its longest term — the "from ฿X/mo" customers ask for.
-    ? financingFor(price, defaultTemplate.minDownPaymentPercent, longestTerm.ratePercent, longestTerm.months, defaultTemplate.installmentRounding).installmentAmount
+    ? financingFor(price, defaultTemplate.minDownPaymentPercent, longestTerm.ratePercent, longestTerm.months, defaultTemplate.paymentRounding).installmentAmount
     : undefined
 
   const rowOptions = unitRows

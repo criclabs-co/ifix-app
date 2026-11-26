@@ -13,7 +13,7 @@ import { TermChips } from '../../components/TermChips'
 import { DownPaymentField } from '../../components/DownPaymentField'
 import { InterestField } from '../../components/InterestField'
 import { FirstPaymentDateField } from './components/FirstPaymentDateField'
-import { clampDown, preferredTermOf } from '../../utils/quote'
+import { clampDown, financingFor, preferredTermOf } from '../../utils/quote'
 import { PhotoUpload } from '../../components/PhotoUpload'
 import { BoxPhotosInput } from './components/BoxPhotosInput'
 import { PhotoReminder } from './components/PhotoReminder'
@@ -29,7 +29,6 @@ import { MOCK_PRODUCT_UNITS } from '../../constants/mockProductUnits'
 import { activeTemplatesFor, MOCK_CONTRACT_TEMPLATES } from '../../constants/mockContractTemplates'
 import { MOCK_CUSTOMERS, findCustomerByNationalId, generateCustomerId } from '../../constants/mockCustomers'
 import { MOCK_CONTRACTS } from '../../constants/mockContracts'
-import { calcFixRate, toSatang } from '../../utils/calculator'
 import { buildPlannedSchedule, defaultFirstPaymentDate, needsReview, submitContractForApproval } from '../../utils/contract'
 import { canEditContractFields, isMerchantAdminOrAbove, scopedContractList } from '../../constants/roles'
 import { BoxLabelNote } from './components/BoxLabelNote'
@@ -268,18 +267,8 @@ export function EditContractPage() {
     const product = MOCK_PRODUCTS.find(p => p.id === device!.productId)!
     const unit = MOCK_PRODUCT_UNITS.find(u => u.id === device!.unitId)!
     const devicePrice = unit.customPrice ?? product.salesPrice
-    const downPaymentAmount = Math.round(devicePrice * templateValues!.downPaymentPercent / 100)
-    const loanAmount = devicePrice - downPaymentAmount
-    const calc = calcFixRate(loanAmount, templateValues!.ratePercent, templateValues!.termMonths, selectedTemplate?.installmentRounding)
-    return {
-      devicePrice,
-      downPaymentPercent: templateValues!.downPaymentPercent,
-      downPaymentAmount,
-      ratePercent: templateValues!.ratePercent,
-      paymentTermMonths: templateValues!.termMonths,
-      installmentAmount: calc.monthlyInstallment,
-      totalContractValue: toSatang(downPaymentAmount + calc.totalPayable),
-    }
+    // Same maths as Create and Price Check (utils/quote.ts).
+    return financingFor(devicePrice, templateValues!.downPaymentPercent, templateValues!.ratePercent, templateValues!.termMonths, selectedTemplate?.paymentRounding)
   }
 
   function handleSubmit() {
@@ -378,7 +367,7 @@ export function EditContractPage() {
       penalty: selectedTemplate!.penalty,
       sections: normalizeSections(selectedTemplate!.sections),
       commission: selectedTemplate!.commission,
-      installmentRounding: selectedTemplate!.installmentRounding,
+      paymentRounding: selectedTemplate!.paymentRounding,
     }
     contract.financing = financing
     // Terms or the first payment date may have changed: rebuild the
@@ -518,6 +507,7 @@ export function EditContractPage() {
                 <Form.Item label="Down Payment" name="downPaymentPercent" rules={[{ required: true, message: 'Required' }]}>
                   <DownPaymentField
                     devicePrice={termsDevicePrice}
+                    rounding={selectedTemplate.paymentRounding}
                     min={selectedTemplate.minDownPaymentPercent}
                     max={selectedTemplate.maxDownPaymentPercent}
                   />
@@ -525,9 +515,10 @@ export function EditContractPage() {
                 {selectedTemplate.type === 'free_rate' ? (
                   <Form.Item label="Interest" name="ratePercent" rules={[{ required: true, message: 'Required' }]}>
                     <InterestField
-                      loanAmount={termsDevicePrice - Math.round(termsDevicePrice * (watchedDown ?? 0) / 100)}
+                      devicePrice={termsDevicePrice}
+                      downPaymentPercent={watchedDown}
                       months={watchedTerm}
-                      rounding={selectedTemplate.installmentRounding}
+                      rounding={selectedTemplate.paymentRounding}
                     />
                   </Form.Item>
                 ) : (

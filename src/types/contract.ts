@@ -8,7 +8,7 @@
 // types/installment.ts itself is left alone — AuthUser/UserRole/
 // ScheduleResult there are shared far outside this module (Products pages,
 // roles.ts) and aren't part of the rename.
-import type { CommissionRule, ContractSection, ContractTemplateType, InstallmentRounding, PenaltyRule } from './contractTemplate'
+import type { CommissionRule, ContractSection, ContractTemplateType, PaymentRounding, PenaltyRule } from './contractTemplate'
 import type { IdType } from '../utils/idNumber'
 
 // The doc's full lifecycle. Defaulted/Closed are explicitly called out as
@@ -82,7 +82,7 @@ export interface TemplateSnapshot {
   // contract was created. Absent on older contracts (default layout).
   sections?: ContractSection[]
   commission?: CommissionRule
-  installmentRounding?: InstallmentRounding
+  paymentRounding?: PaymentRounding
 }
 
 export interface FinancingTerms {

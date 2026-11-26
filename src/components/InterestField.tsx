@@ -2,8 +2,9 @@ import { useEffect, useState } from 'react'
 import { Segmented, Typography, theme } from 'antd'
 import { InputNumber } from './AppInputNumber'
 import { useIsMobile } from './useIsMobile'
-import { calcFixRate } from '../utils/calculator'
-import type { InstallmentRounding } from '../types/contractTemplate'
+import { downPaymentFor } from '../utils/calculator'
+import { financingFor } from '../utils/quote'
+import type { PaymentRounding } from '../types/contractTemplate'
 
 interface Props {
   // The monthly rate, %, supplied by Form.Item or passed directly (Price
@@ -11,13 +12,14 @@ interface Props {
   // was entered.
   value?: number
   onChange?: (ratePercent: number | undefined) => void
-  // What the rate applies to: the device price less the down payment, over
-  // the chosen term.
-  loanAmount: number
+  // The device price and down payment %: the rate applies to the price less
+  // the (exact) down payment, over the chosen term.
+  devicePrice: number
+  downPaymentPercent?: number
   months?: number
-  // The template's installment rounding — the profit shown is what the
-  // rounded installments actually earn.
-  rounding?: InstallmentRounding
+  // The template's payment rounding — the profit shown is what the rounded
+  // down payment and installments actually bring in.
+  rounding?: PaymentRounding
 }
 
 type Mode = 'rate' | 'profit'
@@ -33,24 +35,41 @@ const baht = new Intl.NumberFormat('th-TH', { style: 'currency', currency: 'THB'
 // months). Either way the other figure shows underneath. In profit mode the
 // profit is what's held: change the down payment or the term and the rate
 // follows. Shared by the contract's Template & Terms step and Price Check.
-export function InterestField({ value, onChange, loanAmount, months, rounding }: Props) {
+//
+// Profit is what the contract brings in over the device price: the total
+// contract value (rounded down payment + rounded installments) less the
+// price. Rounding can make an exact target impossible, so profit mode picks
+// the lowest rate whose profit reaches it — the closest achievable profit
+// at or above the target.
+export function InterestField({ value, onChange, devicePrice, downPaymentPercent = 0, months, rounding }: Props) {
   const { token } = theme.useToken()
   const isMobile = useIsMobile()
   const [mode, setMode] = useState<Mode>('rate')
   const [profit, setProfit] = useState<number | null>(null)
 
+  const { loanAmount } = downPaymentFor(devicePrice, downPaymentPercent, rounding)
   const canConvert = loanAmount > 0 && !!months
-  const rateFor = (p: number) => Math.round(p / (loanAmount * months!) * 100 * 100) / 100
-  // What the installments actually earn over the term, once each one is
-  // rounded per the template (rounding up adds to the profit).
-  const profitFor = (rate: number) => calcFixRate(loanAmount, rate, months!, rounding).totalInterest
+  const profitFor = (rate: number) =>
+    Math.round((financingFor(devicePrice, downPaymentPercent, rate, months!, rounding).totalContractValue - devicePrice) * 100) / 100
+  // The lowest rate (to 0.01%, what the contract stores) whose profit is at
+  // least the target. Start from the flat-interest estimate, then step: up
+  // while it falls short, down while a lower rate still reaches it (a
+  // round-up option can make several rates earn the same).
+  const rateFor = (target: number) => {
+    const step = (r: number, by: number) => Math.round((r + by) * 100) / 100
+    const reaches = (r: number) => profitFor(r) >= target - 0.001
+    let rate = Math.max(0, Math.round(target / (loanAmount * months!) * 100 * 100) / 100)
+    for (let i = 0; i < 100000 && !reaches(rate); i++) rate = step(rate, 0.01)
+    for (let i = 0; i < 100000 && rate > 0 && reaches(step(rate, -0.01)); i++) rate = step(rate, -0.01)
+    return rate
+  }
 
   // Profit mode holds the profit: when the loan or term moves, the rate
   // that earns it moves with them.
   useEffect(() => {
     if (mode === 'profit' && profit != null && canConvert) onChange?.(rateFor(profit))
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [loanAmount, months])
+  }, [loanAmount, months, rounding])
 
   function switchMode(next: Mode) {
     if (next === 'profit') setProfit(value != null && canConvert ? profitFor(value) : null)

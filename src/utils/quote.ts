@@ -1,8 +1,8 @@
 import type { AuthUser } from '../types/installment'
-import type { ContractTemplate, InstallmentRounding } from '../types/contractTemplate'
+import type { ContractTemplate, PaymentRounding } from '../types/contractTemplate'
 import { activeTemplatesFor } from '../constants/mockContractTemplates'
 import { isMerchantAdminOrAbove } from '../constants/roles'
-import { calcFixRate, toSatang } from './calculator'
+import { calcFixRate, toSatang, downPaymentFor } from './calculator'
 
 // Per the Contract doc's Free Rate terms ("pick a term: 3/6/10/12/18/24
 // months") — a different set from Fixed Rate's own per-template terms.
@@ -63,9 +63,13 @@ export interface Financing {
 // A contract's money, from the device price and its terms. The contract's
 // own Preview and a Price Check quote both come from here — the same maths,
 // so the number quoted at the counter is the number on the contract.
-export function financingFor(devicePrice: number, downPaymentPercent: number, ratePercent: number, termMonths: number, rounding?: InstallmentRounding): Financing {
-  const downPaymentAmount = Math.round(devicePrice * downPaymentPercent / 100)
-  const loanAmount = devicePrice - downPaymentAmount
+//
+// Per the template's payment rounding: the down payment and the installments
+// are each worked out exactly, then each rounded on its own (no final
+// installment absorbs a remainder). The total is what the customer actually
+// pays — the rounded down payment plus the rounded installments.
+export function financingFor(devicePrice: number, downPaymentPercent: number, ratePercent: number, termMonths: number, rounding?: PaymentRounding): Financing {
+  const { amount: downPaymentAmount, loanAmount } = downPaymentFor(devicePrice, downPaymentPercent, rounding)
   const calc = calcFixRate(loanAmount, ratePercent, termMonths, rounding)
   return {
     devicePrice,

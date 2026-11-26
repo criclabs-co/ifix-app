@@ -46,6 +46,9 @@ export interface ContractDocumentData {
     downPayment: number
     monthly: number
     termMonths: number
+    // What the customer pays in all: the rounded down payment plus the
+    // rounded installments (per the template's payment rounding).
+    contractValue: number
   }
   schedule: {
     period: string
@@ -437,6 +440,7 @@ function buildUnits(data: ContractDocumentData, token: Token): Unit[] {
               <div style={{ flex: 1, minWidth: 0 }}>
                 <Field label="ราคาสินค้า" value={`${financials.total.toLocaleString()} บาท`} token={token} />
                 <Field label="แบ่งจ่ายเดือนละ" value={`${financials.monthly.toLocaleString()} บาท`} token={token} />
+                <Field label="มูลค่ารวมตามสัญญา" value={`${financials.contractValue.toLocaleString()} บาท`} token={token} />
               </div>
               <div style={{ flex: 1, minWidth: 0 }}>
                 <Field label="ชำระงวดแรก" value={`${financials.downPayment.toLocaleString()} บาท`} token={token} />

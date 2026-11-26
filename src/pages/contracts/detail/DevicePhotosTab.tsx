@@ -6,9 +6,10 @@ import type { AuthUser } from '../../../types/installment'
 import { PhotoSlotCard } from '../../../components/PhotoSlotCard'
 import { MOCK_USER_ACCOUNTS } from '../../../constants/mockUsers'
 import {
-  UNBOXING_SLOT_COUNT, boxPhotoSlots, filledSlotCount, unboxingPhotoCount, unboxingSlots,
+  UNBOXING_SLOT_COUNT, boxPhotoSlots, filledSlotCount, photosLocked, unboxingPhotoCount, unboxingSlots,
 } from '../../../constants/unboxingPhotos'
 import { setBoxPhotos, setUnboxingPhotos } from '../../../utils/contract'
+import { Callout } from '../../../components/Callout'
 import { UnboxingPhotosField } from '../components/UnboxingPhotosField'
 import { PhotoSlotsGrid } from '../components/PhotoSlotsGrid'
 
@@ -68,9 +69,20 @@ export function DevicePhotosTab({ contract, actor, canAdd, activated, onChanged 
 
   return (
     <>
+      {/* Settled or Closed: the record is final for everyone, so say why
+          the add/replace/remove controls are gone. */}
+      {photosLocked(contract) && (
+        <Callout
+          type="info"
+          message="Photos are final"
+          description={`This contract is ${contract.status}, so its photos can no longer be added, replaced or removed.`}
+          style={{ marginBottom: 16 }}
+        />
+      )}
+
       <Panel title="Box Photos" subtitle={boxCount === 0 ? 'Optional · none added yet' : `${boxCount} of ${boxSlots.length} added`}>
         <Image.PreviewGroup>
-          <PhotoSlotsGrid readOnly={!canAdd} slots={boxSlots} value={box} onChange={changeBox} />
+          <PhotoSlotsGrid readOnly={!canAdd} confirmRemove slots={boxSlots} value={box} onChange={changeBox} />
         </Image.PreviewGroup>
       </Panel>
 
@@ -86,7 +98,7 @@ export function DevicePhotosTab({ contract, actor, canAdd, activated, onChanged 
         >
           <Image.PreviewGroup>
             {canAdd ? (
-              <UnboxingPhotosField device={contract.device} value={unboxing} onChange={changeUnboxing} />
+              <UnboxingPhotosField device={contract.device} value={unboxing} onChange={changeUnboxing} confirmRemove />
             ) : (
               <>
                 <PhotoSlotsGrid readOnly slots={unboxingSlots(contract.device)} value={unboxing} />

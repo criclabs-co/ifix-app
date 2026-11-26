@@ -64,12 +64,18 @@ export function hasAnyBoxPhoto(photos: DevicePhotos | undefined): boolean {
   return !!photos && Object.values(photos).some(Boolean)
 }
 
+// A Settled or Closed contract is finished, so its photo record is final:
+// no uploads, replacements or removals, and no reminders to add any.
+export function photosLocked(contract: Pick<Contract, 'status'>): boolean {
+  return contract.status === 'settled' || contract.status === 'closed'
+}
+
 // Which photo sets still need a reminder: box photos at any point, unboxing
 // photos once the contract is activated (that's when the device is handed
 // over). "Missing" means none at all — a partly filled set doesn't nag.
-// A Closed or Settled contract is done, so it never asks.
+// A locked (Settled or Closed) contract never asks.
 export function missingPhotoSets(contract: Contract, activated: boolean): { box: boolean; unboxing: boolean } {
-  if (contract.status === 'closed' || contract.status === 'settled') return { box: false, unboxing: false }
+  if (photosLocked(contract)) return { box: false, unboxing: false }
   return {
     box: !hasAnyBoxPhoto(contract.devicePhotos),
     unboxing: activated && unboxingPhotoCount(contract.unboxingPhotos) === 0,

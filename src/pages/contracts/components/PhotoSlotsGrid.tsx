@@ -8,12 +8,14 @@ interface Props<T extends object> {
   onChange?: (value: T) => void
   // View only: every slot read-only, empty ones read "Not added".
   readOnly?: boolean
+  // Confirm before a photo is removed — see PhotoSlotCard.
+  confirmRemove?: boolean
 }
 
 // A grid of guided photo slots — used for box photos and unboxing photos,
 // in the contract wizard, the Record Down Payment drawer and the Device
 // Photos tab.
-export function PhotoSlotsGrid<T extends object>({ slots, value, onChange, readOnly = false }: Props<T>) {
+export function PhotoSlotsGrid<T extends object>({ slots, value, onChange, readOnly = false, confirmRemove = false }: Props<T>) {
   // Slot keys are plain strings here; each caller's own type (DevicePhotos,
   // UnboxingPhotos) holds a photo URL under each of its slots' keys.
   const read = (from: T | undefined, key: string) => (from as Record<string, unknown> | undefined)?.[key] as string | undefined
@@ -28,6 +30,7 @@ export function PhotoSlotsGrid<T extends object>({ slots, value, onChange, readO
             icon={slotIcon(slot)}
             value={read(value, slot.key)}
             readOnly={readOnly}
+            confirmRemove={confirmRemove}
             onChange={url => onChange?.({ ...value, [slot.key]: url } as T)}
           />
         )

@@ -4,7 +4,7 @@ import type { BankAccountProfile, Merchant } from '../types/merchant'
 import type { Branch } from '../types/branch'
 import type { PaymentRounding } from '../types/contractTemplate'
 import type { Contract } from '../types/contract'
-import { calcFixRate, downPaymentFor } from './calculator'
+import { calcFixRate, downPaymentFor, toSatang } from './calculator'
 import { defaultFirstPaymentDate, installmentDueDates } from './contract'
 import { getWorkspaceAvatarUrl } from './avatar'
 import { normalizeSections } from '../constants/contractSections'
@@ -121,6 +121,7 @@ export function buildSampleContractDocument({
       downPayment,
       monthly: calc.monthlyInstallment,
       termMonths,
+      contractValue: toSatang(downPayment + calc.totalPayable),
     },
     schedule,
     payment: paymentFor(merchant, branch, '—'),
@@ -187,6 +188,7 @@ export function buildContractDocument(
       downPayment: financing.downPaymentAmount,
       monthly: financing.installmentAmount,
       termMonths: financing.paymentTermMonths,
+      contractValue: financing.totalContractValue,
     },
     // Period 0 is the down payment; the printed table numbers it งวดที่ 1
     // and counts the installments from there, matching the doc's layout.

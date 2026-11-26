@@ -1,5 +1,5 @@
 import { useRef, useState } from 'react'
-import { Button, Image, Typography, theme } from 'antd'
+import { App, Button, Image, Typography, theme } from 'antd'
 import { Camera, RefreshCw, Trash2, Upload } from 'lucide-react'
 import { useIconColors } from '../constants/iconColors'
 import { useIsMobile } from './useIsMobile'
@@ -14,6 +14,10 @@ interface Props {
   // View only — no add/replace/remove controls; an empty slot just reads
   // "Not added".
   readOnly?: boolean
+  // Ask before removing (a danger confirm). For slots that save the moment
+  // they change, where a stray tap would otherwise lose the photo; a form
+  // that saves later doesn't need it.
+  confirmRemove?: boolean
 }
 
 function fileToDataUrl(file: File): Promise<string> {
@@ -31,8 +35,9 @@ function fileToDataUrl(file: File): Promise<string> {
 // directly and so is offered on mobile only (on desktop it would just open
 // the same file picker as Upload). No real backend: the photo is kept as a
 // data URL on the record.
-export function PhotoSlotCard({ label, hint, icon, value, onChange, readOnly = false }: Props) {
+export function PhotoSlotCard({ label, hint, icon, value, onChange, readOnly = false, confirmRemove = false }: Props) {
   const { token } = theme.useToken()
+  const { modal } = App.useApp()
   const iconColors = useIconColors()
   const isMobile = useIsMobile()
   const uploadRef = useRef<HTMLInputElement>(null)
@@ -44,6 +49,17 @@ export function PhotoSlotCard({ label, hint, icon, value, onChange, readOnly = f
 
   async function take(file: File | undefined) {
     if (file && file.type.startsWith('image/')) onChange?.(await fileToDataUrl(file))
+  }
+
+  function remove() {
+    if (!confirmRemove) { onChange?.(undefined); return }
+    modal.confirm({
+      title: `Remove the ${label} photo?`,
+      content: "It will be deleted from this contract's photo record. You can upload a new one afterwards.",
+      okText: 'Remove',
+      okButtonProps: { danger: true },
+      onOk: () => onChange?.(undefined),
+    })
   }
 
   function pick(e: React.ChangeEvent<HTMLInputElement>) {
@@ -151,7 +167,7 @@ export function PhotoSlotCard({ label, hint, icon, value, onChange, readOnly = f
               <Button
                 aria-label={`Remove ${label} photo`}
                 icon={<Trash2 size={16} strokeWidth={2.25} />}
-                onClick={() => onChange?.(undefined)}
+                onClick={remove}
                 style={{ flex: 'none' }}
               />
             </>

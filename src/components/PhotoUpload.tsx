@@ -1,4 +1,4 @@
-import { Upload, theme } from 'antd'
+import { App, Upload, theme } from 'antd'
 import type { UploadFile } from 'antd'
 import { Plus } from 'lucide-react'
 import { useIconColors } from '../constants/iconColors'
@@ -13,6 +13,9 @@ interface Props {
   // Lets the file picker take several photos at once (still capped at
   // maxCount). Off by default so single-photo fields keep a single pick.
   multiple?: boolean
+  // Ask before removing a photo (a danger confirm) — for piles that save
+  // the moment they change. See PhotoSlotCard's prop of the same name.
+  confirmRemove?: boolean
 }
 
 function fileToDataUrl(file: File): Promise<string> {
@@ -26,8 +29,9 @@ function fileToDataUrl(file: File): Promise<string> {
 
 // No real backend — files are read as data URLs and kept in-memory on the
 // record itself, same convention as the rest of this prototype's mock data.
-export function PhotoUpload({ value = [], onChange, maxCount = 4, disabled = false, multiple = false }: Props) {
+export function PhotoUpload({ value = [], onChange, maxCount = 4, disabled = false, multiple = false, confirmRemove = false }: Props) {
   const { token } = theme.useToken()
+  const { modal } = App.useApp()
   const iconColors = useIconColors()
 
   const fileList: UploadFile[] = value.map((url, i) => ({
@@ -58,7 +62,18 @@ export function PhotoUpload({ value = [], onChange, maxCount = 4, disabled = fal
         }}
         onRemove={file => {
           const idx = Number(file.uid)
-          onChange?.(value.filter((_, i) => i !== idx))
+          const commit = () => onChange?.(value.filter((_, i) => i !== idx))
+          if (!confirmRemove) { commit(); return }
+          // Removal happens in onOk; returning false keeps antd from also
+          // dropping the file from its own list (the list is driven by value).
+          modal.confirm({
+            title: 'Remove this photo?',
+            content: "It will be deleted from this contract's photo record. You can upload a new one afterwards.",
+            okText: 'Remove',
+            okButtonProps: { danger: true },
+            onOk: commit,
+          })
+          return false
         }}
       >
         {disabled || value.length >= maxCount ? null : (

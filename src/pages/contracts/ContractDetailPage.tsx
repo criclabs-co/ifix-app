@@ -15,7 +15,7 @@ import { PenaltyTab } from './detail/PenaltyTab'
 import { ContractPreviewTab } from './detail/ContractPreviewTab'
 import { DevicePhotosTab } from './detail/DevicePhotosTab'
 import { PhotoReminder } from './components/PhotoReminder'
-import { missingPhotoSets } from '../../constants/unboxingPhotos'
+import { missingPhotoSets, photosLocked } from '../../constants/unboxingPhotos'
 import { LifecycleActions } from './components/LifecycleActions'
 import { PageEmptyState } from '../../components/PageEmptyState'
 import { MobileActionBar } from '../../components/MobileActionBar'
@@ -82,7 +82,7 @@ export function ContractDetailPage() {
   // what makes it live — and what the unboxing photos and penalties follow.
   const activated = isActivated(contract)
   const missingPhotos = missingPhotoSets(contract, activated)
-  const canAddPhotos = canManage && contract.status !== 'closed'
+  const canAddPhotos = canManage && !photosLocked(contract)
 
   const confirmClose = () => confirmCloseContract(app, contract!, actor, refresh)
 

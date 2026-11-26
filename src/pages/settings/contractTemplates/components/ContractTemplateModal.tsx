@@ -6,9 +6,9 @@ import { ChevronDown, Plus, Trash2 } from 'lucide-react'
 import { useAppWindowContainer } from '../../../../contexts/AppWindowContext'
 import { useDevTools } from '../../../../contexts/DevToolsContext'
 import { useCurrentUser } from '../../../../contexts/AuthContext'
-import type { ContractSection, ContractSectionKey, ContractTemplate, ContractTemplateType, InstallmentRounding, PenaltyType } from '../../../../types/contractTemplate'
+import type { ContractSection, ContractSectionKey, ContractTemplate, ContractTemplateType, PaymentRounding, PenaltyType } from '../../../../types/contractTemplate'
 import { Select } from '../../../../components/AppSelect'
-import { DEFAULT_INSTALLMENT_ROUNDING, INSTALLMENT_ROUNDING_FOOTNOTE, INSTALLMENT_ROUNDING_OPTIONS } from '../../../../constants/installmentRounding'
+import { DEFAULT_PAYMENT_ROUNDING, PAYMENT_ROUNDING_FOOTNOTE, PAYMENT_ROUNDING_OPTIONS } from '../../../../constants/paymentRounding'
 import { DEFAULT_COMMISSION, DEFAULT_CONTRACT_SECTIONS, normalizeSections } from '../../../../constants/contractSections'
 import { ContractSectionsField } from './ContractSectionsField'
 import { generateContractTemplateId } from '../../../../constants/mockContractTemplates'
@@ -33,7 +33,7 @@ interface FormValues {
   maxLoanAmount: number
   maxPaymentAmount?: number
   fixedRateTerms?: { months: number; ratePercent: number }[]
-  installmentRounding: InstallmentRounding
+  paymentRounding: PaymentRounding
   title: string
   bindingStatement: string
   legalDeclarations: string
@@ -54,7 +54,7 @@ type FormGroup = 'details' | 'penalty' | 'content' | 'sections'
 const ALL_GROUPS: FormGroup[] = ['details', 'penalty', 'content', 'sections']
 
 const GROUP_FIELDS: Record<FormGroup, (keyof FormValues)[]> = {
-  details: ['name', 'description', 'type', 'minDownPaymentPercent', 'maxDownPaymentPercent', 'maxLoanAmount', 'maxPaymentAmount', 'fixedRateTerms', 'installmentRounding'],
+  details: ['name', 'description', 'type', 'minDownPaymentPercent', 'maxDownPaymentPercent', 'maxLoanAmount', 'maxPaymentAmount', 'fixedRateTerms', 'paymentRounding'],
   content: ['title', 'bindingStatement', 'legalDeclarations'],
   penalty: ['penaltyType', 'penaltyRatePercent', 'penaltyFlatFeeAmount', 'penaltyGraceDays', 'penaltyMaxCap', 'penaltyLegalText'],
   sections: ['sections', 'commissionRatePercent', 'commissionText'],
@@ -71,7 +71,7 @@ const DEFAULT_VALUES: FormValues = {
   maxDownPaymentPercent: 50,
   maxLoanAmount: 100000,
   fixedRateTerms: [{ months: 12, ratePercent: 1.75 }],
-  installmentRounding: DEFAULT_INSTALLMENT_ROUNDING,
+  paymentRounding: DEFAULT_PAYMENT_ROUNDING,
   title: 'Hire Purchase Agreement',
   bindingStatement: '',
   legalDeclarations: '',
@@ -177,7 +177,7 @@ export function ContractTemplateModal({ open, template, merchantId, onClose, onS
         maxLoanAmount: template.maxLoanAmount,
         maxPaymentAmount: template.maxPaymentAmount,
         fixedRateTerms: template.fixedRateTerms ?? [{ months: 12, ratePercent: 1.75 }],
-        installmentRounding: template.installmentRounding ?? DEFAULT_INSTALLMENT_ROUNDING,
+        paymentRounding: template.paymentRounding ?? DEFAULT_PAYMENT_ROUNDING,
         title: template.title,
         bindingStatement: template.bindingStatement,
         legalDeclarations: template.legalDeclarations,
@@ -212,7 +212,7 @@ export function ContractTemplateModal({ open, template, merchantId, onClose, onS
       maxLoanAmount: values.maxLoanAmount,
       maxPaymentAmount: values.type === 'free_rate' ? values.maxPaymentAmount : undefined,
       fixedRateTerms: values.type === 'fixed_rate' ? values.fixedRateTerms : undefined,
-      installmentRounding: values.installmentRounding,
+      paymentRounding: values.paymentRounding,
       title: values.title,
       bindingStatement: values.bindingStatement,
       legalDeclarations: values.legalDeclarations,
@@ -376,9 +376,9 @@ export function ContractTemplateModal({ open, template, merchantId, onClose, onS
 
                   {/* How each installment amount is rounded — copied onto
                       every new contract with the rest of the terms. */}
-                  <Form.Item label="Installment Rounding" name="installmentRounding" extra={INSTALLMENT_ROUNDING_FOOTNOTE} rules={[{ required: true, message: 'Required' }]}>
+                  <Form.Item label="Payment Rounding" name="paymentRounding" extra={PAYMENT_ROUNDING_FOOTNOTE} rules={[{ required: true, message: 'Required' }]}>
                     <Select
-                      options={INSTALLMENT_ROUNDING_OPTIONS.map(o => ({ value: o.value, label: o.label, example: o.example }))}
+                      options={PAYMENT_ROUNDING_OPTIONS.map(o => ({ value: o.value, label: o.label, example: o.example }))}
                       optionRender={o => (
                         <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12 }}>
                           <span>{o.label}</span>

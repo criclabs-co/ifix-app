@@ -9,6 +9,7 @@ import { TermChips } from '../../components/TermChips'
 import { canCreateContract, isMerchantAdminOrAbove } from '../../constants/roles'
 import { defaultTemplateOf, financingFor, preferredTermOf, selectableTemplatesFor, termsOf, type QuoteHandoff } from '../../utils/quote'
 import { unitPrice } from '../../utils/product'
+import { downPaymentFor } from '../../utils/calculator'
 import type { AuthUser } from '../../types/installment'
 import type { ContractTemplate } from '../../types/contractTemplate'
 import type { Product, ProductUnit } from '../../types/product'
@@ -146,9 +147,11 @@ export function QuoteView({ actor, group, units, preferredBranch, matchedUnitId,
   const term = template ? termsOf(template).find(t => t.months === termMonths) : undefined
   const ratePercent = template?.type === 'fixed_rate' ? term?.ratePercent : freeRate ?? undefined
   const financing = template && termMonths && ratePercent != null && devicePrice
-    ? financingFor(devicePrice, downPct, ratePercent, termMonths, template.installmentRounding)
+    ? financingFor(devicePrice, downPct, ratePercent, termMonths, template.paymentRounding)
     : undefined
-  const loanAmount = financing ? financing.devicePrice - financing.downPaymentAmount : 0
+  // Financed: the price less the exact down payment (rounding the down
+  // payment up doesn't shrink the loan — see financingFor).
+  const loanAmount = financing ? downPaymentFor(devicePrice, downPct, template?.paymentRounding).loanAmount : 0
   const overLimit = !!template && !!financing && loanAmount > template.maxLoanAmount
 
   const canStart = canCreateContract(actor) && !!unit && !!product && !!financing && !overLimit && !!template && !!branch
@@ -292,6 +295,7 @@ export function QuoteView({ actor, group, units, preferredBranch, matchedUnitId,
               value={downPct}
               onChange={p => setDownPct(p ?? template.minDownPaymentPercent)}
               devicePrice={devicePrice}
+              rounding={template.paymentRounding}
               min={template.minDownPaymentPercent}
               max={template.maxDownPaymentPercent}
             />
@@ -303,9 +307,10 @@ export function QuoteView({ actor, group, units, preferredBranch, matchedUnitId,
             <InterestField
               value={freeRate ?? undefined}
               onChange={r => setFreeRate(r ?? null)}
-              loanAmount={devicePrice - Math.round(devicePrice * downPct / 100)}
+              devicePrice={devicePrice}
+              downPaymentPercent={downPct}
               months={termMonths}
-              rounding={template.installmentRounding}
+              rounding={template.paymentRounding}
             />
           </Form.Item>
         )}

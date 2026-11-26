@@ -2,9 +2,9 @@ import dayjs from 'dayjs'
 import type { ContractDocumentData } from '../components/ContractDocument'
 import type { BankAccountProfile, Merchant } from '../types/merchant'
 import type { Branch } from '../types/branch'
-import type { InstallmentRounding } from '../types/contractTemplate'
+import type { PaymentRounding } from '../types/contractTemplate'
 import type { Contract } from '../types/contract'
-import { calcFixRate } from './calculator'
+import { calcFixRate, downPaymentFor } from './calculator'
 import { defaultFirstPaymentDate, installmentDueDates } from './contract'
 import { getWorkspaceAvatarUrl } from './avatar'
 import { normalizeSections } from '../constants/contractSections'
@@ -60,7 +60,7 @@ interface SampleInput {
   content: ContractDocumentData['content']
   termMonths: number
   ratePercent: number
-  rounding?: InstallmentRounding
+  rounding?: PaymentRounding
 }
 
 export function buildSampleContractDocument({
@@ -71,8 +71,7 @@ export function buildSampleContractDocument({
   ratePercent,
   rounding,
 }: SampleInput): ContractDocumentData {
-  const downPayment = Math.round(SAMPLE.devicePrice * SAMPLE.downPaymentPercent / 100)
-  const loanAmount = SAMPLE.devicePrice - downPayment
+  const { amount: downPayment, loanAmount } = downPaymentFor(SAMPLE.devicePrice, SAMPLE.downPaymentPercent, rounding)
   const calc = calcFixRate(loanAmount, ratePercent, termMonths, rounding)
   const createdAt = dayjs().format('D MMM YYYY')
 

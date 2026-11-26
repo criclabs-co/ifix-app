@@ -1,6 +1,8 @@
 import { useState } from 'react'
 import { Typography, theme } from 'antd'
 import { InputNumber } from './AppInputNumber'
+import { downPaymentFor } from '../utils/calculator'
+import type { PaymentRounding } from '../types/contractTemplate'
 
 interface Props {
   // The down payment as a whole %, supplied by Form.Item or passed
@@ -11,6 +13,9 @@ interface Props {
   // The template's allowed range.
   min: number
   max: number
+  // The template's payment rounding — the ฿ shown is the rounded down
+  // payment, what the customer actually pays.
+  rounding?: PaymentRounding
 }
 
 const thousands = (v: number | string | undefined) => `${v ?? ''}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')
@@ -22,11 +27,11 @@ const plain = (v: string | undefined) => Number((v ?? '').replace(/[^\d.]/g, '')
 // kept inside the template's range) when it's committed, then shown as that
 // % works out — so the % the contract stores and the ฿ it shows never
 // disagree. Shared by the contract's Template & Terms step and Price Check.
-export function DownPaymentField({ value, onChange, devicePrice, min, max }: Props) {
+export function DownPaymentField({ value, onChange, devicePrice, min, max, rounding }: Props) {
   const { token } = theme.useToken()
   // The amount while it's being typed, before it rounds to a %.
   const [amountDraft, setAmountDraft] = useState<number | null>(null)
-  const amount = value != null ? Math.round(devicePrice * value / 100) : null
+  const amount = value != null ? downPaymentFor(devicePrice, value, rounding).amount : null
 
   function commitAmount() {
     if (amountDraft == null || !devicePrice) {

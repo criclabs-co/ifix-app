@@ -1,7 +1,7 @@
 import dayjs from 'dayjs'
 import type { Contract, ContractStatus, ScheduleItem, ContractPaymentRecord, DeviceSnapshot, CustomerSnapshot, TemplateSnapshot } from '../types/contract'
-import type { ContractTemplate, InstallmentRounding } from '../types/contractTemplate'
-import { calcFixRate, toSatang } from '../utils/calculator'
+import type { ContractTemplate, PaymentRounding } from '../types/contractTemplate'
+import { calcFixRate, toSatang, downPaymentFor } from '../utils/calculator'
 import { MERCHANT_ID } from './mockUsers'
 import { MOCK_PRODUCTS } from './mockProducts'
 import { MOCK_PRODUCT_UNITS, unitIdFor } from './mockProductUnits'
@@ -57,7 +57,7 @@ function templateSnapshotFor(template: ContractTemplate): TemplateSnapshot {
     penalty: template.penalty,
     sections: normalizeSections(template.sections),
     commission: template.commission,
-    installmentRounding: template.installmentRounding,
+    paymentRounding: template.paymentRounding,
   }
 }
 
@@ -73,10 +73,9 @@ function buildScheduleAndPayments(
   monthsSinceStart: number,
   paidCount: number,
   overdueCount: number,
-  rounding?: InstallmentRounding,
+  rounding?: PaymentRounding,
 ) {
-  const downPaymentAmount = Math.round(devicePrice * downPaymentPercent / 100)
-  const loanAmount = devicePrice - downPaymentAmount
+  const { amount: downPaymentAmount, loanAmount } = downPaymentFor(devicePrice, downPaymentPercent, rounding)
   const calc = calcFixRate(loanAmount, ratePercent, termMonths, rounding)
   const startDate = dayjs().subtract(monthsSinceStart, 'month')
 
@@ -206,7 +205,7 @@ export const MOCK_CONTRACTS: Contract[] = SEEDS.map(seed => {
     seed.monthsSinceStart,
     seed.paidCount,
     seed.overdueCount,
-    seed.template.installmentRounding,
+    seed.template.paymentRounding,
   )
   // Draft/pending/under-review/rejected/approved contracts haven't reached
   // activation yet — their schedule is the planned one built at creation
